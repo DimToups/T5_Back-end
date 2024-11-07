@@ -32,7 +32,9 @@ export class QuizService{
 
     async createQuiz(questionCount: number, categoryId?: number, difficultyId?: number): Promise<CreateQuizResponse>{
         const questions = await this.getQuestions(questionCount, categoryId, difficultyId);
-        const code = this.generateQuizCode();
+        let code = this.generateQuizCode();
+        while(await this.prismaService.quiz.findUnique({where: {code}}))
+            code = this.generateQuizCode();
         const categories = await this.getCategories();
         const difficulties = this.getDifficulties();
         const dbQuestions = await Promise.all(questions.map(async(question: any) => {
