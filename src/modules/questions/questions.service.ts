@@ -9,7 +9,26 @@ export class QuestionsService{
     ){}
 
     async getCurrentQuestion(quizCode: string): Promise<QuestionEntity>{
-        // TODO
-        return null;
+        const quiz = await this.prismaService.quiz.findUnique({
+            where: {
+                code: quizCode,
+            },
+            include: {
+                quiz_questions: {
+                    include: {
+                        question: true,
+                    }
+                }
+            }
+        });
+        const questions = quiz.quiz_questions.map((quizQuestion: any) => quizQuestion.question);
+        const question = questions[quiz.current_question];
+        return{
+            id: question.id,
+            question: question.question,
+            difficulty: question.difficulty,
+            category: question.category,
+            answers: question.incorrect_answers.concat(question.correct_answer).sort(() => Math.random() - 0.5),
+        };
     }
 }
