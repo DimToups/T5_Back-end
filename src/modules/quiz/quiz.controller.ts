@@ -1,10 +1,11 @@
-import {Body, Controller, Get, Param, Post} from "@nestjs/common";
-import {ApiResponse, ApiTags} from "@nestjs/swagger";
+import {Body, Controller, Get, Param, Post, Req, UseGuards} from "@nestjs/common";
+import {ApiBearerAuth, ApiResponse, ApiTags} from "@nestjs/swagger";
 import CreateQuizDto from "./models/dto/create-quiz.dto";
 import {CategoryEntity} from "./models/entities/category.entity";
 import {QuizService} from "./quiz.service";
 import {CreateQuizResponse} from "./models/responses/create-quiz.response";
 import {QuizEntity} from "./models/entities/quiz.entity";
+import {QuizGuard} from "./guards/quiz.guard";
 
 @Controller("quiz")
 @ApiTags("Quiz")
@@ -13,10 +14,12 @@ export class QuizController{
         private readonly quizService: QuizService,
     ){}
 
-    @Get(":code")
+    @Get()
+    @UseGuards(QuizGuard)
+    @ApiBearerAuth()
     @ApiResponse({status: 200, type: QuizEntity})
-    async getQuiz(@Param("code") code: string){
-        return await this.quizService.getQuizInformations(code);
+    async getQuiz(@Req() req: any){
+        return await this.quizService.getQuizInformations(req.quiz.code);
     }
 
     @Post("create")
