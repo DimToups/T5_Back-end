@@ -1,39 +1,30 @@
 import {Body, Controller, Get, Post} from "@nestjs/common";
-import {ApiTags} from "@nestjs/swagger";
+import {ApiResponse, ApiTags} from "@nestjs/swagger";
 import CreateQuizDto from "./models/dto/create-quiz.dto";
+import {CategoryEntity} from "./models/entities/category.entity";
+import {QuizService} from "./quiz.service";
 
 @Controller()
 @ApiTags("Quiz")
 export class QuizController{
     constructor(
-
+        private readonly quizService: QuizService,
     ){}
 
     @Post("create")
     async createQuiz(@Body() createQuizDto: CreateQuizDto){
-
+        return await this.quizService.createQuiz(createQuizDto.questionCount, createQuizDto.categoryId, createQuizDto.difficultyId);
     }
 
-    @Get("themes")
-    async getThemes(){
-
+    @Get("categories")
+    @ApiResponse({status: 200, type: CategoryEntity, isArray: true})
+    async getCategories(): Promise<CategoryEntity[]>{
+        return await this.quizService.getCategories();
     }
 
     @Get("difficulties")
+    @ApiResponse({status: 200, type: CategoryEntity, isArray: true})
     getDifficulties(){
-        return [
-            {
-                id: 1,
-                name: "Easy"
-            },
-            {
-                id: 2,
-                name: "Medium"
-            },
-            {
-                id: 3,
-                name: "Hard"
-            }
-        ];
+        return this.quizService.getDifficulties();
     }
 }

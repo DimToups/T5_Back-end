@@ -1,5 +1,5 @@
 import {ApiProperty} from "@nestjs/swagger";
-import {IsNumber, Max, Min} from "class-validator";
+import {IsNumber, IsOptional, Max, Min} from "class-validator";
 
 export default class CreateQuizDto{
     @ApiProperty()
@@ -9,8 +9,10 @@ export default class CreateQuizDto{
         questionCount: number;
     @ApiProperty()
     @IsNumber()
+    @IsOptional()
         categoryId: number;
     @ApiProperty()
     @IsNumber()
+    @IsOptional()
         difficultyId: number;
 }
