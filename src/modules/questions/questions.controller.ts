@@ -14,16 +14,6 @@ export class QuestionsController{
         private readonly questionsService: QuestionsService,
     ){}
 
-    @Post("answer")
-    @ApiBearerAuth()
-    @ApiResponse({status: HttpStatus.OK, description: "Answer submitted successfully", type: SubmitAnswerResponse})
-    @ApiResponse({status: HttpStatus.NOT_FOUND, description: "Quiz or question not found"})
-    @ApiResponse({status: HttpStatus.BAD_REQUEST, description: "Invalid request data"})
-    @ApiResponse({status: HttpStatus.UNAUTHORIZED, description: "Unauthorized access"})
-    async submitAnswer(@Req() req: any, @Body() submitAnswerDto: SubmitAnswerDto): Promise<SubmitAnswerResponse>{
-        return await this.questionsService.submitAnswer(req.quiz, submitAnswerDto.answer);
-    }
-
     @Get("current")
     @ApiBearerAuth()
     @ApiResponse({status: HttpStatus.OK, description: "Current question retrieved successfully", type: QuestionEntity})
@@ -34,5 +24,15 @@ export class QuestionsController{
         if(!currentQuestion)
             throw new NotFoundException("No more questions available.");
         return currentQuestion;
+    }
+
+    @Post("answer")
+    @ApiBearerAuth()
+    @ApiResponse({status: HttpStatus.OK, description: "Answer submitted successfully", type: SubmitAnswerResponse})
+    @ApiResponse({status: HttpStatus.NOT_FOUND, description: "Quiz or question not found"})
+    @ApiResponse({status: HttpStatus.BAD_REQUEST, description: "Invalid request data"})
+    @ApiResponse({status: HttpStatus.UNAUTHORIZED, description: "Unauthorized access"})
+    async submitAnswer(@Req() req: any, @Body() submitAnswerDto: SubmitAnswerDto): Promise<SubmitAnswerResponse>{
+        return await this.questionsService.submitAnswer(req.quiz, submitAnswerDto.answer);
     }
 }
