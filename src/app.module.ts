@@ -18,6 +18,7 @@ dotenv.config();
             limit: 50,
         }]),
         QuizModule,
+
     ]
 })
 export class AppModule{}

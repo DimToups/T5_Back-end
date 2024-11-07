@@ -3,6 +3,7 @@ import {ApiResponse, ApiTags} from "@nestjs/swagger";
 import CreateQuizDto from "./models/dto/create-quiz.dto";
 import {CategoryEntity} from "./models/entities/category.entity";
 import {QuizService} from "./quiz.service";
+import {CreateQuizResponse} from "./models/responses/create-quiz.response";
 
 @Controller()
 @ApiTags("Quiz")
@@ -12,6 +13,7 @@ export class QuizController{
     ){}
 
     @Post("create")
+    @ApiResponse({status: 200, type: CreateQuizResponse})
     async createQuiz(@Body() createQuizDto: CreateQuizDto){
         return await this.quizService.createQuiz(createQuizDto.questionCount, createQuizDto.categoryId, createQuizDto.difficultyId);
     }

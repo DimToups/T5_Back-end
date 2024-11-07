@@ -4,12 +4,15 @@ import {DifficultyEntity} from "./models/entities/difficulty.entity";
 import {PrismaService} from "../../common/services/prisma.service";
 import {CipherService} from "../../common/services/cipher.service";
 import * as he from "he";
+import {QuestionsService} from "../questions/questions.service";
+import {CreateQuizResponse} from "./models/responses/create-quiz.response";
 
 @Injectable()
 export class QuizService{
     constructor(
         private readonly prismaService: PrismaService,
         private readonly cipherService: CipherService,
+        private readonly questionsService: QuestionsService,
     ){}
 
     private generateQuizCode(): string{
@@ -24,7 +27,7 @@ export class QuizService{
         return difficulties.find(difficulty => difficulty.name.toLowerCase() === name.toLowerCase());
     }
 
-    async createQuiz(questionCount: number, categoryId?: number, difficultyId?: number){
+    async createQuiz(questionCount: number, categoryId?: number, difficultyId?: number): Promise<CreateQuizResponse>{
         const questions = await this.getQuestions(questionCount, categoryId, difficultyId);
         const code = this.generateQuizCode();
         const categories = await this.getCategories();
@@ -43,7 +46,7 @@ export class QuizService{
             data: dbQuestions,
             skipDuplicates: true
         });
-        await this.prismaService.quiz.create({
+        const quiz = await this.prismaService.quiz.create({
             data: {
                 code,
                 category: categoryId,
@@ -59,6 +62,10 @@ export class QuizService{
         await this.prismaService.quizQuestions.createMany({
             data: quizQuestions
         });
+        return {
+            quiz,
+            firstQuestion: await this.questionsService.getCurrentQuestion(quiz.code),
+        };
     }
 
     private async getQuestions(questionCount: number, categoryId?: number, difficultyId?: number){

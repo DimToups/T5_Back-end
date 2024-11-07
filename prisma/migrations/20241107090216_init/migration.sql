@@ -13,6 +13,7 @@ CREATE TABLE "questions" (
 -- CreateTable
 CREATE TABLE "quiz" (
     "code" TEXT NOT NULL,
+    "current_question" INTEGER NOT NULL DEFAULT 0,
     "difficulty" INTEGER,
     "category" INTEGER,
 
