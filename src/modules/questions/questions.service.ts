@@ -23,12 +23,21 @@ export class QuestionsService{
         });
         const questions = quiz.quiz_questions.map((quizQuestion: any) => quizQuestion.question);
         const question = questions[quiz.current_question];
-        return{
-            id: question.id,
-            question: question.question,
-            difficulty: question.difficulty,
-            category: question.category,
-            answers: question.incorrect_answers.concat(question.correct_answer).sort(() => Math.random() - 0.5),
-        };
+        if(question.incorrect_answers.length === 3)
+            return{
+                id: question.id,
+                question: question.question,
+                difficulty: question.difficulty,
+                category: question.category,
+                answers: question.incorrect_answers.concat(question.correct_answer).sort(() => Math.random() - 0.5),
+            };
+        else
+            return{
+                id: question.id,
+                question: question.question,
+                difficulty: question.difficulty,
+                category: question.category,
+                answers: question.incorrect_answers.concat(question.correct_answer),
+            };
     }
 }
