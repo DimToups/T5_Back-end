@@ -56,35 +56,22 @@ export class QuestionsService{
                 id: currentQuestion.id,
             }
         });
-        let finalQuiz: any;
-        if(question.correct_answer.toLowerCase() === answer.toLowerCase()){
-            finalQuiz = await this.prismaService.quiz.update({
-                where: {
-                    code: quiz.code,
+        const isCorrect = question.correct_answer.toLowerCase() === answer.toLowerCase();
+        const finalQuiz = await this.prismaService.quiz.update({
+            where: {
+                code: quiz.code,
+            },
+            data: {
+                current_question: {
+                    increment: 1,
                 },
-                data: {
-                    current_question: {
-                        increment: 1,
-                    },
-                    score: {
-                        increment: 1,
-                    }
+                score: {
+                    increment: isCorrect ? 1 : 0,
                 }
-            });
-        }else{
-            finalQuiz = await this.prismaService.quiz.update({
-                where: {
-                    code: quiz.code,
-                },
-                data: {
-                    current_question: {
-                        increment: 1,
-                    }
-                }
-            });
-        }
+            }
+        });
         return {
-            isCorrect: question.correct_answer.toLowerCase() === answer.toLowerCase(),
+            isCorrect,
             correctAnswer: question.correct_answer,
             score: finalQuiz.score,
             nextQuestion: await this.getCurrentQuestion(quiz.code),
