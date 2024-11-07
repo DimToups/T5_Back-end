@@ -30,6 +30,7 @@ export class QuestionsService{
                 difficulty: question.difficulty,
                 category: question.category,
                 answers: question.incorrect_answers.concat(question.correct_answer).sort(() => Math.random() - 0.5),
+                position: quiz.current_question + 1,
             };
         else
             return{
@@ -38,6 +39,7 @@ export class QuestionsService{
                 difficulty: question.difficulty,
                 category: question.category,
                 answers: question.incorrect_answers.concat(question.correct_answer),
+                position: quiz.current_question + 1,
             };
     }
 }

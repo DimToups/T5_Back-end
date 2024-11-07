@@ -68,7 +68,13 @@ export class QuizService{
             data: quizQuestions
         });
         return {
-            quiz,
+            quiz: {
+                code,
+                category: categoryId,
+                difficulty: difficultyId,
+                question_count: quizQuestions.length,
+                score: quiz.score,
+            },
             firstQuestion: await this.questionsService.getCurrentQuestion(quiz.code),
         };
     }

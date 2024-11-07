@@ -11,4 +11,6 @@ export class QuestionEntity{
         category: number;
     @ApiProperty()
         answers: string[];
+    @ApiProperty()
+        position: number;
 }
