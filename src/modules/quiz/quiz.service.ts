@@ -6,6 +6,7 @@ import {CipherService} from "../../common/services/cipher.service";
 import * as he from "he";
 import {QuestionsService} from "../questions/questions.service";
 import {CreateQuizResponse} from "./models/responses/create-quiz.response";
+import {QuizEntity} from "./models/entities/quiz.entity";
 
 @Injectable()
 export class QuizService{
@@ -68,7 +69,13 @@ export class QuizService{
             data: quizQuestions
         });
         return {
-            quiz,
+            quiz: {
+                code,
+                category: categoryId,
+                difficulty: difficultyId,
+                question_count: quizQuestions.length,
+                score: quiz.score,
+            },
             firstQuestion: await this.questionsService.getCurrentQuestion(quiz.code),
         };
     }
@@ -102,6 +109,26 @@ export class QuizService{
             throw new InternalServerErrorException(e);
         }
 
+    }
+
+    async getQuizInformations(quizCode: string): Promise<QuizEntity>{
+        const quiz = await this.prismaService.quiz.findUnique({
+            where: {
+                code: quizCode
+            },
+            include: {
+                quiz_questions: true
+            }
+        });
+        if(!quiz)
+            throw new NotFoundException("Quiz not found");
+        return {
+            code: quiz.code,
+            category: quiz.category,
+            difficulty: quiz.difficulty,
+            question_count: quiz.quiz_questions.length,
+            score: quiz.score,
+        };
     }
 
     getDifficulties(): DifficultyEntity[]{

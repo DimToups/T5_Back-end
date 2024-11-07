@@ -1,6 +1,8 @@
-import {Injectable} from "@nestjs/common";
+import {Injectable, NotFoundException} from "@nestjs/common";
 import {QuestionEntity} from "./models/entities/question.entity";
 import {PrismaService} from "../../common/services/prisma.service";
+import {SubmitAnswerResponse} from "./models/responses/submit-answer.response";
+import {QuizEntity} from "../quiz/models/entities/quiz.entity";
 
 @Injectable()
 export class QuestionsService{
@@ -23,6 +25,8 @@ export class QuestionsService{
         });
         const questions = quiz.quiz_questions.map((quizQuestion: any) => quizQuestion.question);
         const question = questions[quiz.current_question];
+        if(!question)
+            return null;
         if(question.incorrect_answers.length === 3)
             return{
                 id: question.id,
@@ -30,6 +34,7 @@ export class QuestionsService{
                 difficulty: question.difficulty,
                 category: question.category,
                 answers: question.incorrect_answers.concat(question.correct_answer).sort(() => Math.random() - 0.5),
+                position: quiz.current_question + 1,
             };
         else
             return{
@@ -38,6 +43,38 @@ export class QuestionsService{
                 difficulty: question.difficulty,
                 category: question.category,
                 answers: question.incorrect_answers.concat(question.correct_answer),
+                position: quiz.current_question + 1,
             };
+    }
+
+    async submitAnswer(quiz: QuizEntity, answer: string): Promise<SubmitAnswerResponse>{
+        const currentQuestion = await this.getCurrentQuestion(quiz.code);
+        if(!currentQuestion)
+            throw new NotFoundException("Question not found");
+        const question = await this.prismaService.questions.findUnique({
+            where: {
+                id: currentQuestion.id,
+            }
+        });
+        const isCorrect = question.correct_answer.toLowerCase() === answer.toLowerCase();
+        const finalQuiz = await this.prismaService.quiz.update({
+            where: {
+                code: quiz.code,
+            },
+            data: {
+                current_question: {
+                    increment: 1,
+                },
+                score: {
+                    increment: isCorrect ? 1 : 0,
+                }
+            }
+        });
+        return {
+            isCorrect,
+            correctAnswer: question.correct_answer,
+            score: finalQuiz.score,
+            nextQuestion: await this.getCurrentQuestion(quiz.code),
+        };
     }
 }
