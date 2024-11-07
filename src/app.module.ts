@@ -4,6 +4,7 @@ import {ConfigModule} from "@nestjs/config";
 import {ScheduleModule} from "@nestjs/schedule";
 import {ThrottlerModule} from "@nestjs/throttler";
 import * as dotenv from "dotenv";
+import {QuizModule} from "./modules/quiz/quiz.module";
 
 dotenv.config();
 
@@ -16,6 +17,8 @@ dotenv.config();
             ttl: 60000,
             limit: 50,
         }]),
+        QuizModule,
+
     ]
 })
 export class AppModule{}
