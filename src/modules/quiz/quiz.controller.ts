@@ -42,4 +42,14 @@ export class QuizController{
     getDifficulties(){
         return this.quizService.getDifficulties();
     }
+
+    @Post("reset")
+    @UseGuards(QuizGuard)
+    @ApiBearerAuth()
+    @ApiResponse({status: HttpStatus.OK, description: "Quiz reset successfully", type: CreateQuizResponse})
+    @ApiResponse({status: HttpStatus.NOT_FOUND, description: "Quiz not found"})
+    @ApiResponse({status: HttpStatus.UNAUTHORIZED, description: "Unauthorized access"})
+    async resetQuiz(@Req() req: any){
+        await this.quizService.resetQuiz(req.quiz.code);
+    }
 }

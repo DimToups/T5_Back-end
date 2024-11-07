@@ -147,4 +147,20 @@ export class QuizService{
             }
         ];
     }
+
+    async resetQuiz(code: string): Promise<CreateQuizResponse>{
+        await this.prismaService.quiz.update({
+            where: {
+                code
+            },
+            data: {
+                current_question: 0,
+                score: 0
+            }
+        });
+        return {
+            quiz: await this.getQuizInformations(code),
+            firstQuestion: await this.questionsService.getCurrentQuestion(code)
+        };
+    }
 }
