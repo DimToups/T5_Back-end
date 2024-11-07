@@ -2,6 +2,7 @@ import {Injectable, NotFoundException} from "@nestjs/common";
 import {QuestionEntity} from "./models/entities/question.entity";
 import {PrismaService} from "../../common/services/prisma.service";
 import {SubmitAnswerResponse} from "./models/responses/submit-answer.response";
+import {QuizEntity} from "../quiz/models/entities/quiz.entity";
 
 @Injectable()
 export class QuestionsService{
@@ -24,6 +25,8 @@ export class QuestionsService{
         });
         const questions = quiz.quiz_questions.map((quizQuestion: any) => quizQuestion.question);
         const question = questions[quiz.current_question];
+        if(!question)
+            return null;
         if(question.incorrect_answers.length === 3)
             return{
                 id: question.id,
@@ -44,22 +47,8 @@ export class QuestionsService{
             };
     }
 
-    async submitAnswer(quizCode: string, answer: string): Promise<SubmitAnswerResponse>{
-        let quiz: any = await this.prismaService.quiz.findUnique({
-            where: {
-                code: quizCode,
-            },
-            include: {
-                quiz_questions: {
-                    include: {
-                        question: true,
-                    }
-                }
-            }
-        });
-        if(!quiz)
-            throw new NotFoundException("Quiz not found");
-        const currentQuestion = await this.getCurrentQuestion(quizCode);
+    async submitAnswer(quiz: QuizEntity, answer: string): Promise<SubmitAnswerResponse>{
+        const currentQuestion = await this.getCurrentQuestion(quiz.code);
         if(!currentQuestion)
             throw new NotFoundException("Question not found");
         const question = await this.prismaService.questions.findUnique({
@@ -67,10 +56,11 @@ export class QuestionsService{
                 id: currentQuestion.id,
             }
         });
+        let finalQuiz: any;
         if(question.correct_answer.toLowerCase() === answer.toLowerCase()){
-            quiz = await this.prismaService.quiz.update({
+            finalQuiz = await this.prismaService.quiz.update({
                 where: {
-                    code: quizCode,
+                    code: quiz.code,
                 },
                 data: {
                     current_question: {
@@ -82,9 +72,9 @@ export class QuestionsService{
                 }
             });
         }else{
-            quiz = await this.prismaService.quiz.update({
+            finalQuiz = await this.prismaService.quiz.update({
                 where: {
-                    code: quizCode,
+                    code: quiz.code,
                 },
                 data: {
                     current_question: {
@@ -96,8 +86,8 @@ export class QuestionsService{
         return {
             isCorrect: question.correct_answer.toLowerCase() === answer.toLowerCase(),
             correctAnswer: question.correct_answer,
-            score: quiz.score,
-            nextQuestion: await this.getCurrentQuestion(quizCode),
+            score: finalQuiz.score,
+            nextQuestion: await this.getCurrentQuestion(quiz.code),
         };
     }
 }
