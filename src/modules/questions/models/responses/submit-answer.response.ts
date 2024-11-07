@@ -1,8 +1,13 @@
 import {QuestionEntity} from "../entities/question.entity";
+import {ApiProperty} from "@nestjs/swagger";
 
 export class SubmitAnswerResponse{
-    isCorrect: boolean;
-    correctAnswer: string;
-    score: number;
-    nextQuestion: QuestionEntity;
+    @ApiProperty()
+        isCorrect: boolean;
+    @ApiProperty()
+        correctAnswer: string;
+    @ApiProperty()
+        score: number;
+    @ApiProperty()
+        nextQuestion: QuestionEntity;
 }
