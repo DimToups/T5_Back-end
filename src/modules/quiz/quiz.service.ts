@@ -9,6 +9,9 @@ import {CreateQuizResponse} from "./models/responses/create-quiz.response";
 
 @Injectable()
 export class QuizService{
+
+    private static readonly BASE_URL = "https://opentdb.com";
+
     constructor(
         private readonly prismaService: PrismaService,
         private readonly cipherService: CipherService,
@@ -80,7 +83,7 @@ export class QuizService{
             difficultyOption = `&difficulty=${difficultyName.toLowerCase()}`;
         }
         try{
-            const res = await fetch(`https://opentdb.com/api.php?amount=${questionCount}${categoryOption}${difficultyOption}`);
+            const res = await fetch(`${QuizService.BASE_URL}/api.php?amount=${questionCount}${categoryOption}${difficultyOption}`);
             const data = await res.json();
             return data.results;
         }catch (e){
@@ -90,7 +93,7 @@ export class QuizService{
 
     async getCategories(): Promise<CategoryEntity[]>{
         try{
-            const res = await fetch("https://opentdb.com/api_category.php");
+            const res = await fetch(`${QuizService.BASE_URL}/api_category.php`);
             const data = await res.json();
             return data.trivia_categories;
         }catch (e){
