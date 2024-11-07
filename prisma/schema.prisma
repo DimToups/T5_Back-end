@@ -35,11 +35,11 @@ model Quiz {
 }
 
 model QuizQuestions {
-  quizCode   String
-  quiz       Quiz      @relation(fields: [quizCode], references: [code])
-  questionId String
-  question   Questions @relation(fields: [questionId], references: [id])
+  quiz_code   String
+  quiz        Quiz      @relation(fields: [quiz_code], references: [code])
+  question_id String
+  question    Questions @relation(fields: [question_id], references: [id])
 
-  @@id([quizCode, questionId])
+  @@id([quiz_code, question_id])
   @@map("quiz_questions")
 }
