@@ -1,0 +1,18 @@
+image: node:latest
+
+stages:
+  - lint
+
+before_script:
+  - npm i
+
+lint:
+  stage: lint
+  tags:
+    - linux
+  script:
+    - npm i eslint-formatter-gitlab
+    - npx eslint --format gitlab .
+  artifacts:
+    reports:
+      codequality: gl-codequality.json
