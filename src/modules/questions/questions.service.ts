@@ -56,7 +56,7 @@ export class QuestionsService{
                 id: currentQuestion.id,
             }
         });
-        const isCorrect = question.correct_answer.toLowerCase() === answer.toLowerCase();
+        const isCorrect = question.correct_answer.toLowerCase() === answer?.toLowerCase();
         const finalQuiz = await this.prismaService.quiz.update({
             where: {
                 code: quiz.code,
