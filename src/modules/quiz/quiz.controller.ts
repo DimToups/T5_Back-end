@@ -27,7 +27,7 @@ export class QuizController{
     }
 
     @Post("create")
-    @ApiResponse({status: HttpStatus.OK, description: "Quiz created successfully", type: CreateQuizResponse})
+    @ApiResponse({status: HttpStatus.CREATED, description: "Quiz created successfully", type: CreateQuizResponse})
     @ApiResponse({status: HttpStatus.BAD_REQUEST, description: "Invalid request data"})
     async createQuiz(@Body() createQuizDto: CreateQuizDto): Promise<CreateQuizResponse>{
         return await this.quizService.createQuiz(createQuizDto.questionCount, createQuizDto.categoryId, createQuizDto.difficultyId);
