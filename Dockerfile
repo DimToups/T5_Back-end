@@ -16,4 +16,4 @@ RUN pnpm dlx prisma generate
 
 EXPOSE 4000
 
-CMD pnpm dlx prisma migrate deploy && npx prisma db seed && pnpm build && pnpm start:prod
+CMD pnpm dlx prisma migrate deploy && npx prisma db seed && pnpm start
