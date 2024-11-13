@@ -16,3 +16,7 @@ lint:
   artifacts:
     reports:
       codequality: gl-codequality.json
+  only:
+    changes:
+      - "*.ts"
+      - "*.js"
