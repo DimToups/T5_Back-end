@@ -1,4 +1,4 @@
-import {Injectable, InternalServerErrorException, NotFoundException} from "@nestjs/common";
+import {BadRequestException, Injectable, InternalServerErrorException, NotFoundException} from "@nestjs/common";
 import {CategoryEntity} from "./models/entities/category.entity";
 import {DifficultyEntity} from "./models/entities/difficulty.entity";
 import {PrismaService} from "../../common/services/prisma.service";
@@ -32,7 +32,9 @@ export class QuizService{
     }
 
     async createQuiz(questionCount: number, categoryId?: number, difficultyId?: number): Promise<CreateQuizResponse>{
-        const questions = await this.getQuestions(questionCount, categoryId, difficultyId);
+        const questions: any[] = await this.getQuestions(questionCount, categoryId, difficultyId);
+        if(!questions || questions.length === 0)
+            throw new BadRequestException("No questions found for this settings");
         let code = this.generateQuizCode();
         while(await this.prismaService.quiz.findUnique({where: {code}}))
             code = this.generateQuizCode();
@@ -80,7 +82,7 @@ export class QuizService{
         };
     }
 
-    private async getQuestions(questionCount: number, categoryId?: number, difficultyId?: number){
+    private async getQuestions(questionCount: number, categoryId?: number, difficultyId?: number): Promise<any[]>{
         let categoryOption = "";
         if(categoryId)
             categoryOption = `&category=${categoryId}`;
