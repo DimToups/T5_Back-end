@@ -48,13 +48,13 @@ export class QuizController{
     }
 
     @Post("reset")
-    @HttpCode(HttpStatus.NO_CONTENT)
+    @HttpCode(HttpStatus.OK)
     @UseGuards(QuizGuard)
     @ApiBearerAuth()
-    @ApiResponse({status: HttpStatus.NO_CONTENT, description: "Quiz reset successfully"})
+    @ApiResponse({status: HttpStatus.OK, description: "Quiz reset successfully", type: CreateQuizResponse})
     @ApiResponse({status: HttpStatus.NOT_FOUND, description: "Quiz not found"})
     @ApiResponse({status: HttpStatus.UNAUTHORIZED, description: "Unauthorized access"})
-    async resetQuiz(@Req() req: any): Promise<void>{
-        await this.quizService.resetQuiz(req.quiz.code);
+    async resetQuiz(@Req() req: any): Promise<CreateQuizResponse>{
+        return await this.quizService.resetQuiz(req.quiz.code);
     }
 }
