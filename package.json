@@ -1,8 +1,7 @@
 {
-    "name": "n2i-2024-api",
-    "version": "1.0.0",
-    "description": "",
-    "author": "Xen0Xys",
+    "name": "fregna-api",
+    "version": "1.0.0-rc.1",
+    "author": "Tom CZEKAJ",
     "private": true,
     "license": "Attribution-NonCommercial-NoDerivatives 4.0 International",
     "scripts": {
