@@ -13,8 +13,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Rooms {
-  id String @id @default(uuid())
+model Questions {
+  id                String          @id
+  question          String
+  difficulty        Int
+  category          Int
+  correct_answer    String
+  incorrect_answers String[]
+  quiz_questions    QuizQuestions[]
 
-  @@map("rooms")
+  @@map("questions")
+}
+
+model Quiz {
+  code             String          @id
+  current_question Int             @default(0)
+  difficulty       Int?
+  category         Int?
+  score            Int             @default(0)
+  quiz_questions   QuizQuestions[]
+
+  @@map("quiz")
+}
+
+model QuizQuestions {
+  quiz_code   String
+  quiz        Quiz      @relation(fields: [quiz_code], references: [code])
+  question_id String
+  question    Questions @relation(fields: [question_id], references: [id])
+
+  @@id([quiz_code, question_id])
+  @@map("quiz_questions")
 }

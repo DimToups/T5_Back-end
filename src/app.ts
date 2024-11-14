@@ -49,8 +49,8 @@ async function loadServer(server: NestFastifyApplication){
 
     // Swagger
     const config = new DocumentBuilder()
-        .setTitle("Template API")
-        .setDescription("Documentation for the Template API")
+        .setTitle("Fregna API")
+        .setDescription("Documentation for the Fregna API")
         .setVersion(process.env.npm_package_version)
         .addBearerAuth()
         .build();
@@ -71,12 +71,12 @@ async function loadServer(server: NestFastifyApplication){
 
     // AsyncAPI
     const asyncApiOptions = new AsyncApiDocumentBuilder()
-        .setTitle("Template API")
-        .setDescription("Documentation for the Template API")
+        .setTitle("Fregna API")
+        .setDescription("Documentation for the Fregna API")
         .setVersion(process.env.npm_package_version)
         .setDefaultContentType("application/json")
         .addBearerAuth()
-        .addServer("template-api", {
+        .addServer("fregna-api", {
             url: "http://localhost:4000",
             protocol: "socket.io",
         })
