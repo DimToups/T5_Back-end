@@ -8,6 +8,7 @@ import {CacheModule} from "@nestjs/cache-manager";
 import {APP_INTERCEPTOR} from "@nestjs/core";
 import {UsersModule} from "./modules/users/users.module";
 import {EnumsModule} from "./modules/enums/enums.module";
+import {CronModule} from "./modules/cron/cron.module";
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ dotenv.config();
         CacheModule.register({isGlobal: true}),
         EnumsModule,
         UsersModule,
+        CronModule,
     ],
     providers: [
         {

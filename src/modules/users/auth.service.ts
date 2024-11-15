@@ -40,4 +40,15 @@ export class AuthService{
         if(!session)
             throw new NotFoundException("Session not found");
     }
+
+    async cleanupSessions(): Promise<number>{
+        const {count} = await this.prismaService.sessions.deleteMany({
+            where: {
+                expire_at: {
+                    lte: new Date(),
+                },
+            },
+        });
+        return count;
+    }
 }
