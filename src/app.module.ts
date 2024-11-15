@@ -7,6 +7,7 @@ import * as dotenv from "dotenv";
 import {CacheModule} from "@nestjs/cache-manager";
 import {APP_INTERCEPTOR} from "@nestjs/core";
 import {UsersModule} from "./modules/users/users.module";
+import {EnumsModule} from "./modules/enums/enums.module";
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ dotenv.config();
             limit: 60,
         }]),
         CacheModule.register({isGlobal: true}),
+        EnumsModule,
         UsersModule,
     ],
     providers: [
