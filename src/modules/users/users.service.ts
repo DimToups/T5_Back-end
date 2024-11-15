@@ -2,6 +2,7 @@ import {ConflictException, Injectable, NotFoundException, UnauthorizedException}
 import {PrismaService} from "../../common/services/prisma.service";
 import {CipherService} from "../../common/services/cipher.service";
 import {UserEntity} from "./models/entities/user.entity";
+import {UserProfileEntity} from "./models/entities/user-profile.entity";
 
 @Injectable()
 export class UsersService{
@@ -59,6 +60,14 @@ export class UsersService{
         return new UserEntity(await this.prismaService.users.findFirst({
             where: {
                 email,
+            },
+        }));
+    }
+
+    async getUserProfile(userId: string): Promise<UserProfileEntity>{
+        return new UserProfileEntity(await this.prismaService.users.findUnique({
+            where: {
+                id: userId,
             },
         }));
     }

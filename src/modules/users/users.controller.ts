@@ -1,14 +1,15 @@
 import {UsersService} from "./users.service";
 import {AuthService} from "./auth.service";
-import {Body, Controller, Get, NotFoundException, Post, Req, UseGuards} from "@nestjs/common";
+import {Body, Controller, Get, NotFoundException, Param, Post, Req, UseGuards} from "@nestjs/common";
 import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {CreateUserResponse} from "./models/responses/create-user.response";
 import {CreateUserDto} from "./models/dto/create-user.dto";
 import {LoginUserDto} from "./models/dto/login-user.dto";
 import {AuthGuard} from "./guards/auth.guard";
 import {UserEntity} from "./models/entities/user.entity";
+import {UserProfileEntity} from "./models/entities/user-profile.entity";
 
-@Controller()
+@Controller("users")
 @ApiTags("Users")
 export class UsersController{
     constructor(
@@ -56,5 +57,10 @@ export class UsersController{
     @ApiBearerAuth()
     async me(@Req() request: any): Promise<UserEntity>{
         return request.user;
+    }
+
+    @Get(":user_id")
+    async getUserProfile(@Param("user_id") userId: string): Promise<UserProfileEntity>{
+        return await this.usersService.getUserProfile(userId);
     }
 }
