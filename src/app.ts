@@ -10,7 +10,6 @@ import {Logger} from "@nestjs/common";
 import * as process from "process";
 import * as dotenv from "dotenv";
 import {FastifyListenOptions} from "fastify/types/instance";
-import {AsyncApiDocumentBuilder, AsyncApiModule} from "nestjs-asyncapi";
 
 dotenv.config();
 
@@ -68,21 +67,6 @@ async function loadServer(server: NestFastifyApplication){
         },
         customCss,
     });
-
-    // AsyncAPI
-    const asyncApiOptions = new AsyncApiDocumentBuilder()
-        .setTitle("Fregna API")
-        .setDescription("Documentation for the Fregna API")
-        .setVersion(process.env.npm_package_version)
-        .setDefaultContentType("application/json")
-        .addBearerAuth()
-        .addServer("fregna-api", {
-            url: "http://localhost:4000",
-            protocol: "socket.io",
-        })
-        .build();
-    const asyncapiDocument = AsyncApiModule.createDocument(server, asyncApiOptions);
-    await AsyncApiModule.setup("async-api", server, asyncapiDocument);
 
     server.useGlobalPipes(new CustomValidationPipe());
 }
