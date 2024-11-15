@@ -2,6 +2,7 @@ import {CanActivate, ExecutionContext, Injectable, UnauthorizedException} from "
 import {PrismaService} from "../../../common/services/prisma.service";
 import {FastifyRequest} from "fastify";
 import {UserEntity} from "../models/entities/user.entity";
+import {AuthenticatedRequest} from "../models/models/authenticated-request";
 
 @Injectable()
 export class AuthGuard implements CanActivate{
@@ -16,7 +17,7 @@ export class AuthGuard implements CanActivate{
     }
 
     async canActivate(context: ExecutionContext): Promise<boolean>{
-        const request = context.switchToHttp().getRequest();
+        const request: AuthenticatedRequest = context.switchToHttp().getRequest();
         const sessionId = this.extractTokenFromHeader(request);
         if(!sessionId)
             throw new UnauthorizedException("Session id not found in headers");
@@ -28,6 +29,7 @@ export class AuthGuard implements CanActivate{
             throw new UnauthorizedException("Session expired");
         }
         request.user = new UserEntity(await this.prismaService.users.findUnique({where: {id: session.user_id}}));
+        request.sessionId = sessionId;
         return true;
     }
 }

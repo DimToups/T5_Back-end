@@ -30,4 +30,14 @@ export class AuthService{
         });
         return session.id;
     }
+
+    async deleteSession(sessionId: string): Promise<void>{
+        const session: Sessions = await this.prismaService.sessions.delete({
+            where: {
+                id: sessionId,
+            },
+        });
+        if(!session)
+            throw new NotFoundException("Session not found");
+    }
 }

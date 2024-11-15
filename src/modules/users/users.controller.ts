@@ -58,6 +58,14 @@ export class UsersController{
         return new CreateUserResponse(user, session);
     }
 
+    @Delete("logout")
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @UseGuards(AuthGuard)
+    @ApiBearerAuth()
+    async logout(@Req() request: AuthenticatedRequest): Promise<void>{
+        await this.authService.deleteSession(request.sessionId);
+    }
+
     /**
      * Get the current user
      *
