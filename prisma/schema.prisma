@@ -13,35 +13,94 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Questions {
-  id                String          @id
-  question          String
-  difficulty        Int
-  category          Int
-  correct_answer    String
-  incorrect_answers String[]
-  quiz_questions    QuizQuestions[]
+enum Difficulties {
+  EASY
+  MEDIUM
+  HARD
 
-  @@map("questions")
+  @@map("difficulties")
+}
+
+enum Categories {
+  GENERAL_KNOWLEDGE
+  SCIENCE
+  SPORTS
+  GEOGRAPHY
+  HISTORY
+  POLITICS
+  ART
+  MUSIC
+  FILMS
+  ANIMALS
+
+  @@map("categories")
+}
+
+model Users {
+  id       String     @id
+  username String
+  email    String
+  password String
+  Sessions Sessions[]
+  Quiz     Quiz[]
+  Games    Games[]
+
+  @@map("users")
+}
+
+model Sessions {
+  id        String   @id
+  user_id   String
+  user      Users    @relation(fields: [user_id], references: [id])
+  expire_at DateTime
+
+  @@map("sessions")
 }
 
 model Quiz {
-  code             String          @id
-  current_question Int             @default(0)
-  difficulty       Int?
-  category         Int?
-  score            Int             @default(0)
-  quiz_questions   QuizQuestions[]
+  id          String        @id
+  title       String
+  difficulty  Difficulties?
+  category    Categories?
+  public_code String?
+  user_id     String?
+  user        Users?        @relation(fields: [user_id], references: [id])
+  Games       Games[]
 
   @@map("quiz")
 }
 
-model QuizQuestions {
-  quiz_code   String
-  quiz        Quiz      @relation(fields: [quiz_code], references: [code])
-  question_id String
-  question    Questions @relation(fields: [question_id], references: [id])
+model Games {
+  id               String          @id
+  quiz_id          String
+  quiz             Quiz            @relation(fields: [quiz_id], references: [id])
+  current_question Int
+  score            Int
+  user_id          String?
+  user             Users?          @relation(fields: [user_id], references: [id])
+  GameQuestions    GameQuestions[]
 
-  @@id([quiz_code, question_id])
-  @@map("quiz_questions")
+  @@map("games")
+}
+
+model Questions {
+  sum               String          @id
+  question          String
+  difficulty        Difficulties
+  category          Categories
+  correct_answer    String
+  incorrect_answers String[]
+  GameQuestions     GameQuestions[]
+
+  @@map("questions")
+}
+
+model GameQuestions {
+  game_id     String
+  game        Games     @relation(fields: [game_id], references: [id])
+  question_id String
+  question    Questions @relation(fields: [question_id], references: [sum])
+
+  @@id([game_id, question_id])
+  @@map("game_questions")
 }
