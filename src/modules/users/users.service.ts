@@ -65,10 +65,13 @@ export class UsersService{
     }
 
     async getUserProfile(userId: string): Promise<UserProfileEntity>{
-        return new UserProfileEntity(await this.prismaService.users.findUnique({
+        const user = await this.prismaService.users.findUnique({
             where: {
                 id: userId,
             },
-        }));
+        });
+        if(!user)
+            throw new NotFoundException("User not found");
+        return new UserProfileEntity(user);
     }
 }

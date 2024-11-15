@@ -8,6 +8,7 @@ import {LoginUserDto} from "./models/dto/login-user.dto";
 import {AuthGuard} from "./guards/auth.guard";
 import {UserEntity} from "./models/entities/user.entity";
 import {UserProfileEntity} from "./models/entities/user-profile.entity";
+import {AuthenticatedRequest} from "./models/models/authenticated-request";
 
 @Controller("users")
 @ApiTags("Users")
@@ -55,10 +56,16 @@ export class UsersController{
     @Get("me")
     @UseGuards(AuthGuard)
     @ApiBearerAuth()
-    async me(@Req() request: any): Promise<UserEntity>{
+    async me(@Req() request: AuthenticatedRequest): Promise<UserEntity>{
         return request.user;
     }
 
+    /**
+     * Get a user's profile
+     *
+     * @throws {404} Not Found
+     * @throws {500} Internal Server Error
+     */
     @Get(":user_id")
     async getUserProfile(@Param("user_id") userId: string): Promise<UserProfileEntity>{
         return await this.usersService.getUserProfile(userId);
