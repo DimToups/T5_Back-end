@@ -1,6 +1,17 @@
 import {UsersService} from "./users.service";
 import {AuthService} from "./auth.service";
-import {Body, Controller, Get, NotFoundException, Param, Post, Req, UseGuards} from "@nestjs/common";
+import {
+    Body,
+    Controller,
+    Delete,
+    Get, HttpCode,
+    HttpStatus,
+    NotFoundException,
+    Param,
+    Post,
+    Req,
+    UseGuards
+} from "@nestjs/common";
 import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {CreateUserResponse} from "./models/responses/create-user.response";
 import {CreateUserDto} from "./models/dto/create-user.dto";
@@ -26,8 +37,8 @@ export class UsersController{
      */
     @Post("create")
     async createUser(@Body() createUserDto: CreateUserDto): Promise<CreateUserResponse>{
-        const user = await this.usersService.createUser(createUserDto.username, createUserDto.email, createUserDto.password);
-        const session = await this.usersService.createSession(user.username, createUserDto.password);
+        const user: UserEntity = await this.usersService.createUser(createUserDto.username, createUserDto.email, createUserDto.password);
+        const session: string = await this.authService.createSession(user.username, createUserDto.password);
         return new CreateUserResponse(user, session);
     }
 
@@ -40,10 +51,10 @@ export class UsersController{
      */
     @Post("login")
     async loginUser(@Body() loginUserDto: LoginUserDto): Promise<CreateUserResponse>{
-        const user = await this.usersService.getUserFromEmail(loginUserDto.email);
+        const user: UserEntity = await this.usersService.getUserFromEmail(loginUserDto.email);
         if(!user)
             throw new NotFoundException("User not found");
-        const session = await this.usersService.createSession(user.username, loginUserDto.password);
+        const session: string = await this.authService.createSession(user.username, loginUserDto.password);
         return new CreateUserResponse(user, session);
     }
 
@@ -69,5 +80,19 @@ export class UsersController{
     @Get(":user_id")
     async getUserProfile(@Param("user_id") userId: string): Promise<UserProfileEntity>{
         return await this.usersService.getUserProfile(userId);
+    }
+
+    /**
+     * Delete the current user
+     *
+     * @throws {401} Unauthorized
+     * @throws {500} Internal Server Error
+     */
+    @Delete("/me")
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @UseGuards(AuthGuard)
+    @ApiBearerAuth()
+    async deleteUser(@Req() request: AuthenticatedRequest): Promise<void>{
+        await this.usersService.deleteUser(request.user.id);
     }
 }

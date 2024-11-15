@@ -51,7 +51,7 @@ model Users {
 model Sessions {
   id        String   @id
   user_id   String
-  user      Users    @relation(fields: [user_id], references: [id])
+  user      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
   expire_at DateTime
 
   @@map("sessions")
@@ -64,7 +64,7 @@ model Quiz {
   category    Categories?
   public_code String?
   user_id     String?
-  user        Users?        @relation(fields: [user_id], references: [id])
+  user        Users?        @relation(fields: [user_id], references: [id], onDelete: SetNull)
   Games       Games[]
 
   @@map("quiz")
