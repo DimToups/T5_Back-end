@@ -1,10 +1,12 @@
 import {UsersService} from "./users.service";
 import {AuthService} from "./auth.service";
-import {Body, Controller, NotFoundException, Post} from "@nestjs/common";
-import {ApiTags} from "@nestjs/swagger";
+import {Body, Controller, Get, NotFoundException, Post, Req, UseGuards} from "@nestjs/common";
+import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {CreateUserResponse} from "./models/responses/create-user.response";
 import {CreateUserDto} from "./models/dto/create-user.dto";
 import {LoginUserDto} from "./models/dto/login-user.dto";
+import {AuthGuard} from "./guards/auth.guard";
+import {UserEntity} from "./models/entities/user.entity";
 
 @Controller()
 @ApiTags("Users")
@@ -41,5 +43,18 @@ export class UsersController{
             throw new NotFoundException("User not found");
         const session = await this.usersService.createSession(user.username, loginUserDto.password);
         return new CreateUserResponse(user, session);
+    }
+
+    /**
+     * Get the current user
+     *
+     * @throws {401} Unauthorized
+     * @throws {500} Internal Server Error
+     */
+    @Get("me")
+    @UseGuards(AuthGuard)
+    @ApiBearerAuth()
+    async me(@Req() request: any): Promise<UserEntity>{
+        return request.user;
     }
 }
