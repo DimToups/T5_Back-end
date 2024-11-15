@@ -38,8 +38,8 @@ enum Categories {
 
 model Users {
   id       String     @id
-  username String
-  email    String
+  username String     @unique
+  email    String     @unique
   password String
   Sessions Sessions[]
   Quiz     Quiz[]

@@ -1,8 +1,10 @@
-import {ClassSerializerInterceptor, Controller, Get, UseInterceptors} from "@nestjs/common";
-import {ApiOperation, ApiResponse, ApiTags} from "@nestjs/swagger";
 import {UsersService} from "./users.service";
 import {AuthService} from "./auth.service";
-import {UserEntity} from "./models/user.entity";
+import {Body, Controller, NotFoundException, Post} from "@nestjs/common";
+import {ApiTags} from "@nestjs/swagger";
+import {CreateUserResponse} from "./models/responses/create-user.response";
+import {CreateUserDto} from "./models/dto/create-user.dto";
+import {LoginUserDto} from "./models/dto/login-user.dto";
 
 @Controller()
 @ApiTags("Users")
@@ -13,20 +15,31 @@ export class UsersController{
     ){}
 
     /**
-     * Create a new cat
+     * Create a new user and session
      *
-     * @remarks This operation allows you to create a new cat.
-     *
-     * @throws {500} Something went wrong.
-     * @throws {400} Bad Request.
+     * @throws {409} Conflict
+     * @throws {500} Internal Server Error
      */
-    @Get("test")
-    test(): UserEntity{
-        return new UserEntity({
-            id: 1,
-            username: "test",
-            email: "email",
-            password: "password",
-        });
+    @Post("create")
+    async createUser(@Body() createUserDto: CreateUserDto): Promise<CreateUserResponse>{
+        const user = await this.usersService.createUser(createUserDto.username, createUserDto.email, createUserDto.password);
+        const session = await this.usersService.createSession(user.username, createUserDto.password);
+        return new CreateUserResponse(user, session);
+    }
+
+    /**
+     * Login a user
+     *
+     * @throws {401} Unauthorized
+     * @throws {404} Not Found
+     * @throws {500} Internal Server Error
+     */
+    @Post("login")
+    async loginUser(@Body() loginUserDto: LoginUserDto): Promise<CreateUserResponse>{
+        const user = await this.usersService.getUserFromEmail(loginUserDto.email);
+        if(!user)
+            throw new NotFoundException("User not found");
+        const session = await this.usersService.createSession(user.username, loginUserDto.password);
+        return new CreateUserResponse(user, session);
     }
 }
