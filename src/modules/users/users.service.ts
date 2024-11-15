@@ -62,4 +62,34 @@ export class UsersService{
             },
         });
     }
+
+    async changePassword(userId: string, password: string): Promise<void>{
+        const hashedPassword = await this.cipherService.hashPassword(password);
+        await this.prismaService.users.update({
+            where: {
+                id: userId,
+            },
+            data: {
+                password: hashedPassword,
+            },
+        });
+    }
+
+    async changeUsername(userId: string, username: string): Promise<void>{
+        const user: Users = await this.prismaService.users.findFirst({
+            where: {
+                username,
+            },
+        });
+        if(user)
+            throw new ConflictException("Username already exists");
+        await this.prismaService.users.update({
+            where: {
+                id: userId,
+            },
+            data: {
+                username,
+            },
+        });
+    }
 }

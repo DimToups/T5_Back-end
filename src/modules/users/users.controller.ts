@@ -7,7 +7,7 @@ import {
     Get, HttpCode,
     HttpStatus,
     NotFoundException,
-    Param,
+    Param, Patch,
     Post,
     Req,
     UseGuards
@@ -20,6 +20,8 @@ import {AuthGuard} from "./guards/auth.guard";
 import {UserEntity} from "./models/entities/user.entity";
 import {UserProfileEntity} from "./models/entities/user-profile.entity";
 import {AuthenticatedRequest} from "./models/models/authenticated-request";
+import {ChangePasswordDto} from "./models/dto/change-password.dto";
+import {ChangeUsernameDto} from "./models/dto/change-username.dto";
 
 @Controller("users")
 @ApiTags("Users")
@@ -102,5 +104,34 @@ export class UsersController{
     @ApiBearerAuth()
     async deleteUser(@Req() request: AuthenticatedRequest): Promise<void>{
         await this.usersService.deleteUser(request.user.id);
+    }
+
+    /**
+     * Change the user password
+     *
+     * @throws {401} Unauthorized
+     * @throws {500} Internal Server Error
+     */
+    @Patch("password")
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @UseGuards(AuthGuard)
+    @ApiBearerAuth()
+    async changePassword(@Req() request: AuthenticatedRequest, @Body() body: ChangePasswordDto): Promise<void>{
+        await this.usersService.changePassword(request.user.id, body.password);
+    }
+
+    /**
+     * Change the user username
+     *
+     * @throws {401} Unauthorized
+     * @throws {409} Conflict
+     * @throws {500} Internal Server Error
+     */
+    @Patch("username")
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @UseGuards(AuthGuard)
+    @ApiBearerAuth()
+    async changeUsername(@Req() request: AuthenticatedRequest, @Body() body: ChangeUsernameDto): Promise<void>{
+        await this.usersService.changeUsername(request.user.id, body.username);
     }
 }
