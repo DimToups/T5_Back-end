@@ -1,6 +1,6 @@
 {
     "name": "fregna-api",
-    "version": "1.0.0",
+    "version": "1.1.0-alpha",
     "author": "Tom CZEKAJ",
     "private": true,
     "license": "Attribution-NonCommercial-NoDerivatives 4.0 International",
@@ -9,11 +9,12 @@
         "start": "nest start",
         "start:dev": "nest start --watch",
         "start:debug": "nest start --debug --watch",
-        "start:prod": "node dist/main",
+        "start:prod": "node dist/src/app",
         "lint:fix": "eslint . --fix"
     },
     "dependencies": {
         "@eslint/js": "^9.13.0",
+        "@faker-js/faker": "^9.2.0",
         "@fastify/helmet": "^11.1.1",
         "@fastify/static": "^7.0.4",
         "@nestjs/cache-manager": "^2.3.0",
