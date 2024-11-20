@@ -64,6 +64,7 @@ export class QuestionsService{
     }
 
     async getQuestions(amount: number, difficulty?: Difficulties, category?: Categories): Promise<QuestionEntity[]>{
+        // TODO: Rework (pagination, no amount, no random, user "specific")
         const whereClause: any = {};
         if(difficulty)
             whereClause.difficulty = difficulty;
