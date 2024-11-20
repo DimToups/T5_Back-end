@@ -1,6 +1,6 @@
 import {Injectable, InternalServerErrorException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
-import {Categories, Difficulties} from "@prisma/client";
+import {Categories, Difficulties, Questions} from "@prisma/client";
 import {QuestionEntity} from "./models/entities/question.entity";
 import {CipherService} from "../../common/services/cipher.service";
 import * as he from "he";
@@ -21,9 +21,9 @@ export class QuestionsService{
         return this.cipherService.getSum(infos.join(""));
     }
 
-    async generateQuestions(amount: number, difficulty?: Difficulties, category?: Categories){
+    async generateQuestions(amount: number, difficulty?: Difficulties, category?: Categories): Promise<QuestionEntity[]>{
         const categoryId: number = category ? Object.keys(Categories).indexOf(Categories[category]) + 9 : undefined; // Offset
-        const questions: any[] = await this.getQuestions(amount, categoryId, difficulty);
+        const questions: any[] = await this.fetchQuestions(amount, categoryId, difficulty);
         const formattedQuestions: QuestionEntity[] = questions.map(question => {
             console.log(he.decode(question.category).toUpperCase().replaceAll(" ", "_").replaceAll(":", "").replaceAll("&", "AND"));
             return {
@@ -41,49 +41,43 @@ export class QuestionsService{
         });
     }
 
-    private async getQuestions(questionCount: number, categoryId?: number, difficulty?: string): Promise<any[]>{
-        let categoryOption = "";
+    private async fetchQuestions(questionCount: number, categoryId?: number, difficulty?: string): Promise<any[]>{
+        let categoryOption: string = "";
         if(categoryId)
             categoryOption = `&category=${categoryId}`;
-        let difficultyOption = "";
+        let difficultyOption: string = "";
         if(difficulty){
             difficultyOption = `&difficulty=${difficulty.toLowerCase()}`;
         }
         try{
-            const res = await fetch(`${QuestionsService.BASE_URL}/api.php?amount=${questionCount}${categoryOption}${difficultyOption}`);
-            const data = await res.json();
+            const res: Response = await fetch(`${QuestionsService.BASE_URL}/api.php?amount=${questionCount}${categoryOption}${difficultyOption}`);
+            const data: any = await res.json();
             return data.results;
         }catch (e){
             throw new InternalServerErrorException(e);
         }
     }
 
-
-    private getDifficulties(): any[]{
-        return [
-            {
-                id: 1,
-                name: "Easy"
-            },
-            {
-                id: 2,
-                name: "Medium"
-            },
-            {
-                id: 3,
-                name: "Hard"
-            }
-        ];
-    }
-
-    private async getCategories(): Promise<any[]>{
-        try{
-            const res = await fetch(`${QuestionsService.BASE_URL}/api_category.php`);
-            const data = await res.json();
-            console.log(data.trivia_categories);
-            return data.trivia_categories;
-        }catch (e){
-            throw new InternalServerErrorException(e);
-        }
+    async getQuestions(amount: number, difficulty?: Difficulties, category?: Categories): Promise<QuestionEntity[]>{
+        const whereClause: any = {};
+        if(difficulty)
+            whereClause.difficulty = difficulty;
+        if(category)
+            whereClause.category = category;
+        const questions: Questions[] = await this.prismaService.questions.findMany({
+            where: whereClause,
+        });
+        questions.sort(() => 0.5 - Math.random());
+        questions.length = questions.length > amount ? amount : questions.length;
+        return questions.map((question: Questions) => {
+            return {
+                sum: question.sum,
+                question: question.question,
+                difficulty: question.difficulty,
+                category: question.category,
+                correctAnswer: question.correct_answer,
+                incorrectAnswers: question.incorrect_answers,
+            };
+        });
     }
 }

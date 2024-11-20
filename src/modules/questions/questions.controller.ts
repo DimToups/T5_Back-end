@@ -1,4 +1,4 @@
-import {Body, Controller, Post} from "@nestjs/common";
+import {Body, Controller, Get, Post, Query} from "@nestjs/common";
 import {ApiTags} from "@nestjs/swagger";
 import {QuestionsService} from "./questions.service";
 import {QuestionEntity} from "./models/entities/question.entity";
@@ -14,5 +14,10 @@ export class QuestionsController{
     @Post("generate")
     async generateQuestions(@Body() body: GenerateQuestionDto): Promise<QuestionEntity[]>{
         return this.questionsService.generateQuestions(body.amount, body.difficulty, body.category);
+    }
+
+    @Get()
+    async getQuestions(@Query() query: GenerateQuestionDto): Promise<QuestionEntity[]>{
+        return this.questionsService.getQuestions(query.amount, query.difficulty, query.category);
     }
 }
