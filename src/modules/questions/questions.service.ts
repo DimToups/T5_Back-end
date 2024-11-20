@@ -73,22 +73,18 @@ export class QuestionsService{
         take?: number,
         skip?: number
     ): Promise<PaginationResponse<QuestionEntity[]>>{
-        const whereClause: any = {
-            OR: [
-                {user_id: null},
-                user ? {user_id: user.id} : undefined,
-            ].filter(Boolean),
-        };
-        if(search)
-            whereClause.question = {
-                contains: search,
-            };
-        if(difficulty)
-            whereClause.difficulty = difficulty;
-        if(category)
-            whereClause.category = category;
         const questions: Questions[] = await this.prismaService.questions.findMany({
-            where: whereClause,
+            where: {
+                OR: [
+                    {user_id: null},
+                    user ? {user_id: user.id} : undefined,
+                ].filter(Boolean),
+                question: {
+                    contains: search || "",
+                },
+                difficulty: difficulty || undefined,
+                category: category || undefined,
+            },
             take: take || 50,
             skip: skip || 0,
         });
@@ -105,7 +101,17 @@ export class QuestionsService{
                 });
             }),
             total: await this.prismaService.questions.count({
-                where: whereClause,
+                where: {
+                    OR: [
+                        {user_id: null},
+                        user ? {user_id: user.id} : undefined,
+                    ].filter(Boolean),
+                    question: {
+                        contains: search || "",
+                    },
+                    difficulty: difficulty || undefined,
+                    category: category || undefined,
+                },
             }),
             take: take || 50,
             skip: skip || 0,
