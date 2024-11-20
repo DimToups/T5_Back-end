@@ -9,6 +9,7 @@ import {APP_INTERCEPTOR} from "@nestjs/core";
 import {UsersModule} from "./modules/users/users.module";
 import {EnumsModule} from "./modules/enums/enums.module";
 import {CronModule} from "./modules/cron/cron.module";
+import {QuestionsModule} from "./modules/questions/questions.module";
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ dotenv.config();
         EnumsModule,
         UsersModule,
         CronModule,
+        QuestionsModule,
     ],
     providers: [
         {
