@@ -5,6 +5,7 @@ import {QuestionEntity} from "./models/entities/question.entity";
 import {CipherService} from "../../common/services/cipher.service";
 import * as he from "he";
 import {PartialQuestionEntity} from "./models/entities/partial-question.entity";
+import {UserEntity} from "../users/models/entities/user.entity";
 
 @Injectable()
 export class QuestionsService{
@@ -63,20 +64,35 @@ export class QuestionsService{
         }
     }
 
-    async getQuestions(amount: number, difficulty?: Difficulties, category?: Categories): Promise<QuestionEntity[]>{
-        // TODO: Rework (pagination, no amount, no random, user "specific")
-        const whereClause: any = {};
+    async getQuestions(
+        user?: UserEntity,
+        search?: string,
+        difficulty?: Difficulties,
+        category?: Categories,
+        take?: number,
+        skip?: number
+    ): Promise<QuestionEntity[]>{
+        const whereClause: any = {
+            OR: [
+                {userId: null},
+                user ? {userId: user.id} : undefined,
+            ].filter(Boolean),
+        };
+        if(search)
+            whereClause.question = {
+                contains: search,
+            };
         if(difficulty)
             whereClause.difficulty = difficulty;
         if(category)
             whereClause.category = category;
         const questions: Questions[] = await this.prismaService.questions.findMany({
             where: whereClause,
+            take: take || 50,
+            skip: skip || 0,
         });
-        questions.sort((): number => 0.5 - Math.random());
-        questions.length = questions.length > amount ? amount : questions.length;
         return questions.map((question: Questions): QuestionEntity => {
-            return {
+            return new QuestionEntity({
                 sum: question.sum,
                 question: question.question,
                 difficulty: question.difficulty,
@@ -84,7 +100,7 @@ export class QuestionsService{
                 correctAnswer: question.correct_answer,
                 incorrectAnswers: question.incorrect_answers,
                 userId: question.user_id,
-            };
+            });
         });
     }
 

@@ -202,7 +202,7 @@ export class QuizService{
         });
     }
 
-    async getPublicQuizList(take: number = 50, skip: number = 0): Promise<PublicQuizEntity[]>{
+    async getPublicQuizList(take: number, skip: number): Promise<PublicQuizEntity[]>{
         const quizzes: any[] = await this.prismaService.quiz.findMany({
             where: {
                 published: true,
@@ -210,8 +210,8 @@ export class QuizService{
             include: {
                 quiz_questions: true
             },
-            take,
-            skip,
+            take: take || 50,
+            skip: skip || 0,
         });
         return quizzes.map((quiz: any): PublicQuizEntity => {
             return new PublicQuizEntity({
