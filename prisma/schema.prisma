@@ -51,13 +51,14 @@ enum Categories {
 }
 
 model Users {
-  id       String     @id
-  username String     @unique
-  email    String     @unique
-  password String
-  Sessions Sessions[]
-  Quiz     Quiz[]
-  Games    Games[]
+  id        String      @id
+  username  String      @unique
+  email     String      @unique
+  password  String
+  sessions  Sessions[]
+  quiz      Quiz[]
+  games     Games[]
+  Questions Questions[]
 
   @@map("users")
 }
@@ -72,27 +73,28 @@ model Sessions {
 }
 
 model Quiz {
-  id          String        @id
-  title       String
-  difficulty  Difficulties?
-  category    Categories?
-  public_code String?
-  user_id     String?
-  user        Users?        @relation(fields: [user_id], references: [id], onDelete: SetNull)
-  Games       Games[]
+  id             String          @id
+  title          String
+  description    String?
+  difficulty     Difficulties?
+  category       Categories?
+  public_code    String?
+  user_id        String?
+  user           Users?          @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  games          Games[]
+  quiz_questions QuizQuestions[]
 
   @@map("quiz")
 }
 
 model Games {
-  id               String          @id
+  id               String  @id
   quiz_id          String
-  quiz             Quiz            @relation(fields: [quiz_id], references: [id])
+  quiz             Quiz    @relation(fields: [quiz_id], references: [id])
   current_question Int
   score            Int
   user_id          String?
-  user             Users?          @relation(fields: [user_id], references: [id])
-  GameQuestions    GameQuestions[]
+  user             Users?  @relation(fields: [user_id], references: [id])
 
   @@map("games")
 }
@@ -104,18 +106,20 @@ model Questions {
   category          Categories?
   correct_answer    String
   incorrect_answers String[]
-  GameQuestions     GameQuestions[]
+  user_id           String?
+  user              Users?          @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  quiz_questions    QuizQuestions[]
 
   @@map("questions")
 }
 
-model GameQuestions {
-  game_id     String
-  game        Games     @relation(fields: [game_id], references: [id])
+model QuizQuestions {
+  quiz_id     String
+  quiz        Quiz      @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
   question_id String
-  question    Questions @relation(fields: [question_id], references: [sum])
+  question    Questions @relation(fields: [question_id], references: [sum], onDelete: Cascade)
   position    Int
 
-  @@id([game_id, question_id])
-  @@map("game_questions")
+  @@id([quiz_id, question_id])
+  @@map("quiz_questions")
 }
