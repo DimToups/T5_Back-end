@@ -203,10 +203,21 @@ export class QuizService{
         });
     }
 
-    async getPublicQuizList(take: number, skip: number): Promise<PaginationResponse<PublicQuizEntity[]>>{
+    async getPublicQuizList(
+        search?: string,
+        difficulty?: Difficulties,
+        category?: Categories,
+        take?: number,
+        skip?: number
+    ): Promise<PaginationResponse<PublicQuizEntity[]>>{
         const quizzes: any[] = await this.prismaService.quiz.findMany({
             where: {
                 published: true,
+                title: {
+                    contains: search || "",
+                },
+                difficulty: difficulty || undefined,
+                category: category || undefined,
             },
             include: {
                 quiz_questions: true
@@ -229,7 +240,12 @@ export class QuizService{
             total: await this.prismaService.quiz.count({
                 where: {
                     published: true,
-                }
+                    title: {
+                        contains: search || "",
+                    },
+                    difficulty: difficulty || undefined,
+                    category: category || undefined,
+                },
             }),
             take: take || 50,
             skip: skip || 0,

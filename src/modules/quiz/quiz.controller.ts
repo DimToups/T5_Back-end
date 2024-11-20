@@ -23,6 +23,7 @@ import {PublicQuizEntity} from "./models/entity/public-quiz.entity";
 import {PaginationDto} from "../../common/models/dto/pagination.dto";
 import {FastifyReply} from "fastify";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
+import {GetPublicQuizDto} from "./models/dto/get-public-quiz.dto";
 
 @Controller("quiz")
 @ApiTags("Quiz")
@@ -109,8 +110,8 @@ export class QuizController{
      * @throws {500} Internal Server Error
      */
     @Get("public")
-    async getPublicQuizzes(@Res({passthrough: true}) res: FastifyReply, @Query() query: PaginationDto): Promise<PublicQuizEntity[]>{
-        const quiz: PaginationResponse<PublicQuizEntity[]> = await this.quizService.getPublicQuizList(query.take, query.skip);
+    async getPublicQuizzes(@Res({passthrough: true}) res: FastifyReply, @Query() query: GetPublicQuizDto): Promise<PublicQuizEntity[]>{
+        const quiz: PaginationResponse<PublicQuizEntity[]> = await this.quizService.getPublicQuizList(query.search, query.difficulty, query.category, query.take, query.skip);
         res.header("X-Total-Count", quiz.total.toString());
         res.header("X-Take", quiz.take.toString());
         res.header("X-Skip", quiz.skip.toString());
