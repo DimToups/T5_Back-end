@@ -23,15 +23,29 @@ enum Difficulties {
 
 enum Categories {
   GENERAL_KNOWLEDGE
-  SCIENCE
+  ENTERTAINMENT_BOOKS
+  ENTERTAINMENT_FILM
+  ENTERTAINMENT_MUSIC
+  ENTERTAINMENT_MUSICALS_AND_THEATRES
+  ENTERTAINMENT_TELEVISION
+  ENTERTAINMENT_VIDEO_GAMES
+  ENTERTAINMENT_BOARD_GAMES
+  SCIENCE_AND_NATURE
+  SCIENCE_COMPUTERS
+  SCIENCE_MATHEMATICS
+  MYTHOLOGY
   SPORTS
   GEOGRAPHY
   HISTORY
   POLITICS
   ART
-  MUSIC
-  FILMS
+  CELEBRITIES
   ANIMALS
+  VEHICLES
+  ENTERTAINMENT_COMICS
+  SCIENCE_GADGETS
+  ENTERTAINMENT_JAPANESE_ANIME_AND_MANGA
+  ENTERTAINMENT_CARTOON_AND_ANIMATIONS
 
   @@map("categories")
 }
@@ -86,8 +100,8 @@ model Games {
 model Questions {
   sum               String          @id
   question          String
-  difficulty        Difficulties
-  category          Categories
+  difficulty        Difficulties?
+  category          Categories?
   correct_answer    String
   incorrect_answers String[]
   GameQuestions     GameQuestions[]
@@ -100,6 +114,7 @@ model GameQuestions {
   game        Games     @relation(fields: [game_id], references: [id])
   question_id String
   question    Questions @relation(fields: [question_id], references: [sum])
+  position    Int
 
   @@id([game_id, question_id])
   @@map("game_questions")
