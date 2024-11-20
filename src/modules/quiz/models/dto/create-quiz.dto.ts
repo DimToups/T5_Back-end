@@ -1,0 +1,19 @@
+import {Categories, Difficulties} from "@prisma/client";
+import {ApiProperty} from "@nestjs/swagger";
+import {IsOptional, IsString} from "class-validator";
+
+export class CreateQuizDto{
+    @IsString()
+        title: string;
+    @IsString()
+    @IsOptional()
+        description?: string;
+    @ApiProperty({enum: Difficulties})
+    @IsString()
+    @IsOptional()
+        difficulty?: Difficulties;
+    @ApiProperty({enum: Categories})
+    @IsString()
+    @IsOptional()
+        category?: Categories;
+}

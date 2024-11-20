@@ -10,6 +10,7 @@ import {UsersModule} from "./modules/users/users.module";
 import {EnumsModule} from "./modules/enums/enums.module";
 import {CronModule} from "./modules/cron/cron.module";
 import {QuestionsModule} from "./modules/questions/questions.module";
+import {QuizModule} from "./modules/quiz/quiz.module";
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ dotenv.config();
         UsersModule,
         CronModule,
         QuestionsModule,
+        QuizModule,
     ],
     providers: [
         {

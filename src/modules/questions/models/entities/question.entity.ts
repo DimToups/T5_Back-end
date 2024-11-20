@@ -1,13 +1,10 @@
-import {Categories, Difficulties} from "@prisma/client";
-import {ApiProperty} from "@nestjs/swagger";
+import {PartialQuestionEntity} from "./partial-question.entity";
 
-export class QuestionEntity{
+export class QuestionEntity extends PartialQuestionEntity{
     sum: string;
-    question: string;
-    @ApiProperty({example: "EASY"})
-        difficulty: Difficulties;
-    @ApiProperty({example: "GENERAL_KNOWLEDGE"})
-        category: Categories;
-    correctAnswer: string;
-    incorrectAnswers: string[];
+
+    constructor(partial: Partial<QuestionEntity>){
+        super();
+        Object.assign(this, partial);
+    }
 }

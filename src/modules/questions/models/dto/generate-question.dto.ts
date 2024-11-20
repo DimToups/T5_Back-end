@@ -10,9 +10,9 @@ export class GenerateQuestionDto{
     @ApiProperty({enum: Difficulties, required: false})
     @IsString()
     @IsOptional()
-        difficulty: Difficulties;
+        difficulty?: Difficulties;
     @ApiProperty({enum: Categories, required: false})
     @IsString()
     @IsOptional()
-        category: Categories;
+        category?: Categories;
 }
