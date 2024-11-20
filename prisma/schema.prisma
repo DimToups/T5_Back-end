@@ -78,7 +78,7 @@ model Quiz {
   description    String?
   difficulty     Difficulties?
   category       Categories?
-  public_code    String?
+  published      Boolean         @default(false)
   user_id        String?
   user           Users?          @relation(fields: [user_id], references: [id], onDelete: SetNull)
   games          Games[]

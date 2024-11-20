@@ -1,4 +1,4 @@
-import {Body, Controller, Get, Param, Post, Put, Req, UseGuards} from "@nestjs/common";
+import {Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Query, Req, UseGuards} from "@nestjs/common";
 import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {QuizService} from "./quiz.service";
 import {CreateQuizDto} from "./models/dto/create-quiz.dto";
@@ -6,6 +6,8 @@ import {QuizEntity} from "./models/entity/quiz.entity";
 import {UpdateQuizDto} from "./models/dto/update-quiz.dto";
 import {MaybeAuthenticatedRequest} from "../users/models/models/maybe-authenticated-request";
 import {MaybeAuthGuard} from "../users/guards/maybe-auth.guard";
+import {PublicQuizEntity} from "./models/entity/public-quiz.entity";
+import {PaginationDto} from "../../common/models/dto/pagination.dto";
 
 @Controller("quiz")
 @ApiTags("Quiz")
@@ -14,6 +16,11 @@ export class QuizController{
         private readonly quizService: QuizService,
     ){}
 
+    /**
+     * Create a new quiz
+     *
+     * @throws {500} Internal Server Error
+     */
     @Post("create")
     @UseGuards(MaybeAuthGuard)
     @ApiBearerAuth()
@@ -21,15 +28,74 @@ export class QuizController{
         return this.quizService.createQuiz(body.title, body.description, body.difficulty, body.category, req.user);
     }
 
+    /**
+     * Get a quiz data by its id
+     * Only use this route for quiz creation. Quiz information can be found at /quiz/:quiz_id/public
+     *
+     * @throws {400} Bad Request
+     * @throws {401} Unauthorized
+     * @throws {403} Forbidden
+     * @throws {404} Not Found
+     * @throws {500} Internal Server Error
+     */
     @Get(":quiz_id")
-    async getQuizById(@Param("quiz_id") quizId: string): Promise<QuizEntity>{
-        return this.quizService.getQuizById(quizId);
+    async getQuiz(@Param("quiz_id") quizId: string): Promise<QuizEntity>{
+        return this.quizService.getQuizDataById(quizId);
     }
 
+    /**
+     * Update a quiz
+     *
+     * @throws {401} Unauthorized
+     * @throws {403} Forbidden
+     * @throws {404} Not Found
+     * @throws {409} Conflict
+     * @throws {500} Internal Server Error
+     */
     @Put(":quiz_id")
     @UseGuards(MaybeAuthGuard)
     @ApiBearerAuth()
     async updateQuiz(@Req() req: MaybeAuthenticatedRequest, @Param("quiz_id") quizId: string, @Body() body: UpdateQuizDto): Promise<QuizEntity>{
         return this.quizService.updateQuiz(quizId, body.title, body.questions, req.user, body.description, body.difficulty, body.category);
     }
+
+    /**
+     * Publish a quiz
+     *
+     * @throws {400} Bad Request
+     * @throws {401} Unauthorized
+     * @throws {403} Forbidden
+     * @throws {404} Not Found
+     * @throws {500} Internal Server Error
+     */
+    @Post(":quiz_id/publish")
+    @UseGuards(MaybeAuthGuard)
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiBearerAuth()
+    async publishQuiz(@Req() req: MaybeAuthenticatedRequest, @Param("quiz_id") quizId: string): Promise<void>{
+        return this.quizService.publishQuiz(quizId, req.user);
+    }
+
+    /**
+     * Get a public quiz by its id
+     *
+     * @throws {401} Unauthorized
+     * @throws {404} Not Found
+     * @throws {500} Internal Server Error
+     */
+    @Get(":quiz_id/public")
+    async getPublicQuiz(@Param("quiz_id") quizId: string): Promise<PublicQuizEntity>{
+        return this.quizService.getPublicQuiz(quizId);
+    }
+
+    /**
+     * Get a list of public quizzes
+     *
+     * @throws {500} Internal Server Error
+     */
+    @Get("public")
+    async getPublicQuizzes(@Query() query: PaginationDto): Promise<PublicQuizEntity[]>{
+        return this.quizService.getPublicQuizList(query.take, query.skip);
+    }
+
 }

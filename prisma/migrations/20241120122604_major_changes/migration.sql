@@ -30,7 +30,7 @@ CREATE TABLE "quiz" (
     "description" TEXT,
     "difficulty" "difficulties",
     "category" "categories",
-    "public_code" TEXT,
+    "published" BOOLEAN NOT NULL DEFAULT false,
     "user_id" TEXT,
 
     CONSTRAINT "quiz_pkey" PRIMARY KEY ("id")
