@@ -20,7 +20,6 @@ import {UpdateQuizDto} from "./models/dto/update-quiz.dto";
 import {MaybeAuthenticatedRequest} from "../users/models/models/maybe-authenticated-request";
 import {MaybeAuthGuard} from "../users/guards/maybe-auth.guard";
 import {PublicQuizEntity} from "./models/entity/public-quiz.entity";
-import {PaginationDto} from "../../common/models/dto/pagination.dto";
 import {FastifyReply} from "fastify";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 import {GetPublicQuizDto} from "./models/dto/get-public-quiz.dto";
