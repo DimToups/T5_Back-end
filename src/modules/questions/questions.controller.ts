@@ -1,4 +1,4 @@
-import {Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req, UseGuards} from "@nestjs/common";
+import {Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req, Res, UseGuards} from "@nestjs/common";
 import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {QuestionsService} from "./questions.service";
 import {QuestionEntity} from "./models/entities/question.entity";
@@ -6,6 +6,8 @@ import {GenerateQuestionDto} from "./models/dto/generate-question.dto";
 import {MaybeAuthGuard} from "../users/guards/maybe-auth.guard";
 import {GetQuestionsDto} from "./models/dto/get-questions.dto";
 import {MaybeAuthenticatedRequest} from "../users/models/models/maybe-authenticated-request";
+import {PaginationResponse} from "../../common/models/responses/pagination.response";
+import {FastifyReply} from "fastify";
 
 @Controller("questions")
 @ApiTags("Questions")
@@ -33,7 +35,11 @@ export class QuestionsController{
     @Get()
     @UseGuards(MaybeAuthGuard)
     @ApiBearerAuth()
-    async getQuestions(@Req() req: MaybeAuthenticatedRequest, @Query() query: GetQuestionsDto): Promise<QuestionEntity[]>{
-        return this.questionsService.getQuestions(req.user, query.search, query.difficulty, query.category, query.take, query.skip);
+    async getQuestions(@Req() req: MaybeAuthenticatedRequest, @Res({passthrough: true}) res: FastifyReply, @Query() query: GetQuestionsDto): Promise<QuestionEntity[]>{
+        const questions: PaginationResponse<QuestionEntity[]> = await this.questionsService.getQuestions(req.user, query.search, query.difficulty, query.category, query.take, query.skip);
+        res.header("X-Total-Count", questions.total.toString());
+        res.header("X-Take", questions.take.toString());
+        res.header("X-Skip", questions.skip.toString());
+        return questions.data;
     }
 }

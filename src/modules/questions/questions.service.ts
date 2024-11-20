@@ -6,6 +6,7 @@ import {CipherService} from "../../common/services/cipher.service";
 import * as he from "he";
 import {PartialQuestionEntity} from "./models/entities/partial-question.entity";
 import {UserEntity} from "../users/models/entities/user.entity";
+import {PaginationResponse} from "../../common/models/responses/pagination.response";
 
 @Injectable()
 export class QuestionsService{
@@ -71,11 +72,11 @@ export class QuestionsService{
         category?: Categories,
         take?: number,
         skip?: number
-    ): Promise<QuestionEntity[]>{
+    ): Promise<PaginationResponse<QuestionEntity[]>>{
         const whereClause: any = {
             OR: [
-                {userId: null},
-                user ? {userId: user.id} : undefined,
+                {user_id: null},
+                user ? {user_id: user.id} : undefined,
             ].filter(Boolean),
         };
         if(search)
@@ -91,17 +92,24 @@ export class QuestionsService{
             take: take || 50,
             skip: skip || 0,
         });
-        return questions.map((question: Questions): QuestionEntity => {
-            return new QuestionEntity({
-                sum: question.sum,
-                question: question.question,
-                difficulty: question.difficulty,
-                category: question.category,
-                correctAnswer: question.correct_answer,
-                incorrectAnswers: question.incorrect_answers,
-                userId: question.user_id,
-            });
-        });
+        return {
+            data: questions.map((question: Questions): QuestionEntity => {
+                return new QuestionEntity({
+                    sum: question.sum,
+                    question: question.question,
+                    difficulty: question.difficulty,
+                    category: question.category,
+                    correctAnswer: question.correct_answer,
+                    incorrectAnswers: question.incorrect_answers,
+                    userId: question.user_id,
+                });
+            }),
+            total: await this.prismaService.questions.count({
+                where: whereClause,
+            }),
+            take: take || 50,
+            skip: skip || 0,
+        };
     }
 
     async addPartialQuestionsToDatabase(partialQuestions: PartialQuestionEntity[]): Promise<QuestionEntity[]>{

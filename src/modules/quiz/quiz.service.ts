@@ -14,6 +14,7 @@ import {PartialQuestionEntity} from "../questions/models/entities/partial-questi
 import {QuestionsService} from "../questions/questions.service";
 import {UserEntity} from "../users/models/entities/user.entity";
 import {PublicQuizEntity} from "./models/entity/public-quiz.entity";
+import {PaginationResponse} from "../../common/models/responses/pagination.response";
 
 @Injectable()
 export class QuizService{
@@ -202,7 +203,7 @@ export class QuizService{
         });
     }
 
-    async getPublicQuizList(take: number, skip: number): Promise<PublicQuizEntity[]>{
+    async getPublicQuizList(take: number, skip: number): Promise<PaginationResponse<PublicQuizEntity[]>>{
         const quizzes: any[] = await this.prismaService.quiz.findMany({
             where: {
                 published: true,
@@ -213,16 +214,25 @@ export class QuizService{
             take: take || 50,
             skip: skip || 0,
         });
-        return quizzes.map((quiz: any): PublicQuizEntity => {
-            return new PublicQuizEntity({
-                id: quiz.id,
-                title: quiz.title,
-                description: quiz.description || undefined,
-                difficulty: quiz.difficulty || undefined,
-                category: quiz.category || undefined,
-                questionCount: quiz.quiz_questions.length,
-                userId: quiz.user_id || undefined,
-            });
-        });
+        return {
+            data: quizzes.map((quiz: any): PublicQuizEntity => {
+                return new PublicQuizEntity({
+                    id: quiz.id,
+                    title: quiz.title,
+                    description: quiz.description || undefined,
+                    difficulty: quiz.difficulty || undefined,
+                    category: quiz.category || undefined,
+                    questionCount: quiz.quiz_questions.length,
+                    userId: quiz.user_id || undefined,
+                });
+            }),
+            total: await this.prismaService.quiz.count({
+                where: {
+                    published: true,
+                }
+            }),
+            take: take || 50,
+            skip: skip || 0,
+        };
     }
 }

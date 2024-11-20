@@ -1,4 +1,17 @@
-import {Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Query, Req, UseGuards} from "@nestjs/common";
+import {
+    Body,
+    Controller,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Param,
+    Post,
+    Put,
+    Query,
+    Req,
+    Res,
+    UseGuards
+} from "@nestjs/common";
 import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {QuizService} from "./quiz.service";
 import {CreateQuizDto} from "./models/dto/create-quiz.dto";
@@ -8,6 +21,8 @@ import {MaybeAuthenticatedRequest} from "../users/models/models/maybe-authentica
 import {MaybeAuthGuard} from "../users/guards/maybe-auth.guard";
 import {PublicQuizEntity} from "./models/entity/public-quiz.entity";
 import {PaginationDto} from "../../common/models/dto/pagination.dto";
+import {FastifyReply} from "fastify";
+import {PaginationResponse} from "../../common/models/responses/pagination.response";
 
 @Controller("quiz")
 @ApiTags("Quiz")
@@ -94,8 +109,12 @@ export class QuizController{
      * @throws {500} Internal Server Error
      */
     @Get("public")
-    async getPublicQuizzes(@Query() query: PaginationDto): Promise<PublicQuizEntity[]>{
-        return this.quizService.getPublicQuizList(query.take, query.skip);
+    async getPublicQuizzes(@Res({passthrough: true}) res: FastifyReply, @Query() query: PaginationDto): Promise<PublicQuizEntity[]>{
+        const quiz: PaginationResponse<PublicQuizEntity[]> = await this.quizService.getPublicQuizList(query.take, query.skip);
+        res.header("X-Total-Count", quiz.total.toString());
+        res.header("X-Take", quiz.take.toString());
+        res.header("X-Skip", quiz.skip.toString());
+        return quiz.data;
     }
 
 }
