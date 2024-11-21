@@ -12,6 +12,7 @@ import {CronModule} from "./modules/cron/cron.module";
 import {QuestionsModule} from "./modules/questions/questions.module";
 import {QuizModule} from "./modules/quiz/quiz.module";
 import {GamesModule} from "./modules/games/games.module";
+import {StatisticsModule} from "./modules/statistics/statistics.module";
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ dotenv.config();
         QuestionsModule,
         QuizModule,
         GamesModule,
+        StatisticsModule,
     ],
     providers: [
         {
