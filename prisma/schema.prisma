@@ -90,16 +90,17 @@ model Quiz {
 }
 
 model Games {
-  id               String   @id
+  id               String    @id
   quiz_id          String
-  quiz             Quiz     @relation(fields: [quiz_id], references: [id])
-  current_question Int      @default(0)
-  score            Int      @default(0)
+  quiz             Quiz      @relation(fields: [quiz_id], references: [id])
+  current_question Int       @default(0)
+  score            Int       @default(0)
   user_id          String?
-  code             String   @unique
-  user             Users?   @relation(fields: [user_id], references: [id])
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  code             String    @unique
+  user             Users?    @relation(fields: [user_id], references: [id])
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  ended_at         DateTime?
 
   @@map("games")
 }

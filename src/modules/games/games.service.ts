@@ -165,6 +165,7 @@ export class GamesService{
     }
 
     async answerQuestion(gameId: string, answer?: string, user?: UserEntity): Promise<SubmitAnswerResponse>{
+        // GetCurrentQuestion already check game ownership
         const currentQuestion: PublicQuestionEntity = await this.getCurrentQuestion(gameId, user);
         const question: Questions = await this.prismaService.questions.findUnique({
             where: {
@@ -185,11 +186,25 @@ export class GamesService{
                 },
             },
         });
+        let nextQuestion: PublicQuestionEntity | undefined;
+        try{
+            nextQuestion = await this.getCurrentQuestion(game.id, user);
+        }catch(_){
+            // Only possible error is question not found (end of quiz)
+            await this.prismaService.games.update({
+                where: {
+                    id: gameId,
+                },
+                data: {
+                    ended_at: new Date(),
+                },
+            });
+        }
         return {
             isCorrect,
             correctAnswer: question.correct_answer,
             score: game.score,
-            nextQuestion: await this.getCurrentQuestion(game.id, user),
+            nextQuestion,
         };
     }
 }
