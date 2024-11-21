@@ -4,9 +4,11 @@ import {ApiProperty} from "@nestjs/swagger";
 export class PartialQuestionEntity{
     question: string;
     @ApiProperty({example: "EASY"})
-        difficulty?: Difficulties;
+    difficulty?: Difficulties;
+
     @ApiProperty({example: "GENERAL_KNOWLEDGE"})
-        category?: Categories;
+    category?: Categories;
+
     correctAnswer: string;
     incorrectAnswers: string[];
     userId?: string;

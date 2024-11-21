@@ -4,7 +4,6 @@ import {AuthService} from "../users/auth.service";
 
 @Injectable()
 export class SessionCleanupCron{
-
     private logger: Logger = new Logger(SessionCleanupCron.name);
 
     constructor(

@@ -18,7 +18,7 @@ const logger: Logger = new Logger("App");
 async function bootstrap(){
     const app = await NestFactory.create<NestFastifyApplication>(
         AppModule,
-        new FastifyAdapter({exposeHeadRoutes: true})
+        new FastifyAdapter({exposeHeadRoutes: true}),
     );
     await loadServer(app);
     const port = process.env.PORT || 4000;

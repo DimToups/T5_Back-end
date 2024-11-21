@@ -6,7 +6,6 @@ import {MaybeAuthenticatedRequest} from "../models/models/maybe-authenticated-re
 
 @Injectable()
 export class MaybeAuthGuard implements CanActivate{
-
     constructor(
         private readonly prismaService: PrismaService,
     ){}

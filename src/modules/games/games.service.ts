@@ -24,9 +24,9 @@ export class GamesService{
                 quiz_questions: {
                     include: {
                         question: true,
-                    }
-                }
-            }
+                    },
+                },
+            },
         });
         if(!quiz)
             throw new NotFoundException("This quiz doesn't exist.");
@@ -36,7 +36,7 @@ export class GamesService{
                 quiz_id: quizId,
                 user_id: user?.id,
                 code: this.generateQuizCode(),
-            }
+            },
         });
     }
 }

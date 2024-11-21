@@ -10,7 +10,7 @@ import {
     Query,
     Req,
     Res,
-    UseGuards
+    UseGuards,
 } from "@nestjs/common";
 import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {QuizService} from "./quiz.service";
@@ -116,5 +116,4 @@ export class QuizController{
         res.header("X-Skip", quiz.skip.toString());
         return quiz.data;
     }
-
 }

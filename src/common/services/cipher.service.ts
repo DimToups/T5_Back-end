@@ -3,7 +3,6 @@ import * as argon2 from "argon2";
 import * as crypto from "crypto";
 import * as uuid from "uuid";
 
-
 @Injectable()
 export class CipherService{
     // Hash functions
@@ -16,7 +15,7 @@ export class CipherService{
         if(!content) content = "";
         return await argon2.hash(content, {
             type: argon2.argon2id,
-            timeCost: cost
+            timeCost: cost,
         });
     }
 
@@ -29,7 +28,7 @@ export class CipherService{
     // Symmetric functions
     private prepareEncryptionKey(encryptionKey: string | Buffer): Buffer{
         let keyBuffer: Buffer;
-        if (typeof encryptionKey === "string")
+        if(typeof encryptionKey === "string")
             keyBuffer = Buffer.from(encryptionKey);
         else
             keyBuffer = encryptionKey;
@@ -44,7 +43,7 @@ export class CipherService{
     }
 
     cipherBufferSymmetric(content: Buffer, encryptionKey: string | Buffer): Buffer{
-        if (!content) content = Buffer.alloc(0);
+        if(!content) content = Buffer.alloc(0);
         const iv = crypto.randomBytes(12);
         const key = this.prepareEncryptionKey(encryptionKey);
         const cipher = crypto.createCipheriv("aes-256-gcm", key.subarray(0, 32), iv);
@@ -66,7 +65,7 @@ export class CipherService{
         decipher.setAuthTag(tag);
         try{
             return Buffer.concat([decipher.update(encrypted), decipher.final()]);
-        }catch (_){
+        }catch(_){
             throw new Error("Decryption failed");
         }
     }
@@ -93,7 +92,7 @@ export class CipherService{
         const hmac = crypto.createHmac("sha256", key.subarray(32));
         hmac.update(`${saltString}:${ivString}:${encryptedString}`);
         const calculatedDigest = hmac.digest("hex");
-        if (calculatedDigest !== digest)
+        if(calculatedDigest !== digest)
             throw new Error("Integrity check failed");
         const decipher = crypto.createDecipheriv("aes-256-cbc", key.subarray(0, 32), iv);
         let decrypted = decipher.update(encryptedString, "hex", "utf-8");
@@ -109,20 +108,20 @@ export class CipherService{
         if(privateEncryptionKey){
             options = {
                 cipher: "aes-256-cbc",
-                passphrase: privateEncryptionKey
+                passphrase: privateEncryptionKey,
             };
         }
         return crypto.generateKeyPairSync("rsa", {
             modulusLength: modulusLength,
             publicKeyEncoding: {
                 type: "spki",
-                format: "pem"
+                format: "pem",
             },
             privateKeyEncoding: {
                 type: "pkcs8",
                 format: "pem",
-                ...options
-            }
+                ...options,
+            },
         });
     }
 
@@ -131,7 +130,7 @@ export class CipherService{
         const buffer = Buffer.from(content, "utf-8");
         const encrypted = crypto.publicEncrypt({
             key: publicKey,
-            padding: crypto.constants.RSA_PKCS1_OAEP_PADDING
+            padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
         }, buffer);
         return encrypted.toString("base64");
     }
@@ -141,13 +140,13 @@ export class CipherService{
         if(!privateEncryptionKey)
             return crypto.privateDecrypt({
                 key: privateKey,
-                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING
+                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
             }, buffer).toString("utf-8");
         else
             return crypto.privateDecrypt({
                 key: privateKey,
                 padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-                passphrase: privateEncryptionKey
+                passphrase: privateEncryptionKey,
             }, buffer).toString("utf-8");
     }
 

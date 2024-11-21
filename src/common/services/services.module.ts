@@ -13,6 +13,6 @@ import {Module} from "@nestjs/common";
         CipherService,
         JwtService,
         PrismaService,
-    ]
+    ],
 })
 export class ServicesModule{}

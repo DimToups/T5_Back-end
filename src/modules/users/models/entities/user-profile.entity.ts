@@ -5,7 +5,7 @@ export class UserProfileEntity{
     username: string;
 
     constructor(partial: Partial<UserEntity>){
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        // eslint-disable-next-line @/no-unused-vars
         const {password, email, ...userProfile} = partial;
         Object.assign(this, userProfile);
     }

@@ -7,12 +7,14 @@ export class GetQuestionsDto extends PaginationDto{
     @IsString()
     @IsOptional()
     @ApiProperty({enum: Difficulties, required: false})
-        difficulty?: Difficulties;
+    difficulty?: Difficulties;
+
     @IsString()
     @IsOptional()
     @ApiProperty({enum: Categories, required: false})
-        category?: Categories;
+    category?: Categories;
+
     @IsString()
     @IsOptional()
-        search?: string;
+    search?: string;
 }

@@ -4,9 +4,10 @@ export class PaginationDto{
     @IsNumber()
     @Min(1)
     @IsOptional()
-        take?: number;
+    take?: number;
+
     @IsNumber()
     @Min(0)
     @IsOptional()
-        skip?: number;
+    skip?: number;
 }

@@ -9,14 +9,17 @@ const user = {
 
 export class UserEntity{
     @ApiProperty({example: faker.string.uuid()})
-        id: string;
+    id: string;
+
     @ApiProperty({example: faker.internet.username({firstName: user.firstName, lastName: user.lastName})})
-        username: string;
+    username: string;
+
     @ApiProperty({example: faker.internet.email({firstName: user.firstName, lastName: user.lastName})})
-        email: string;
+    email: string;
+
     @Exclude()
     @ApiHideProperty()
-        password: string;
+    password: string;
 
     constructor(partial: Partial<UserEntity>){
         Object.assign(this, partial);

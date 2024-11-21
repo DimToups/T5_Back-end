@@ -10,7 +10,7 @@ import {
     Param, Patch,
     Post,
     Req,
-    UseGuards
+    UseGuards,
 } from "@nestjs/common";
 import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {CreateUserResponse} from "./models/responses/create-user.response";

@@ -4,16 +4,19 @@ import {IsOptional, IsString} from "class-validator";
 
 export class CreateQuizDto{
     @IsString()
-        title: string;
+    title: string;
+
     @IsString()
     @IsOptional()
-        description?: string;
+    description?: string;
+
     @ApiProperty({enum: Difficulties})
     @IsString()
     @IsOptional()
-        difficulty?: Difficulties;
+    difficulty?: Difficulties;
+
     @ApiProperty({enum: Categories})
     @IsString()
     @IsOptional()
-        category?: Categories;
+    category?: Categories;
 }

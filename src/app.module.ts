@@ -36,7 +36,7 @@ dotenv.config();
         {
             provide: APP_INTERCEPTOR,
             useClass: ClassSerializerInterceptor,
-        }
-    ]
+        },
+    ],
 })
 export class AppModule{}

@@ -7,9 +7,11 @@ export class QuizEntity{
     title: string;
     description?: string;
     @ApiProperty({enum: Difficulties})
-        difficulty?: Difficulties;
+    difficulty?: Difficulties;
+
     @ApiProperty({enum: Categories})
-        category?: Categories;
+    category?: Categories;
+
     questions: QuestionEntity[];
     userId?: string;
 

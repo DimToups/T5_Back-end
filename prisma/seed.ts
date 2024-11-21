@@ -8,7 +8,7 @@ async function main(){
     console.log(`\n✅  Seeding completed ! (${Date.now() - gStart}ms)`);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @/no-unused-vars
 async function seed(table: any, data: any[]){
     for(let i = 1; i <= data.length; i++){
         await table.upsert({
