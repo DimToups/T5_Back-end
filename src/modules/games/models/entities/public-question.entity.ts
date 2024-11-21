@@ -1,7 +1,8 @@
-import {Categories, Difficulties} from "@prisma/client";
 import {ApiProperty} from "@nestjs/swagger";
+import {Categories, Difficulties} from "@prisma/client";
 
-export class PartialQuestionEntity{
+export class PublicQuestionEntity{
+    sum: string;
     question: string;
     @ApiProperty({enum: Difficulties, required: false})
     difficulty?: Difficulties;
@@ -9,7 +10,6 @@ export class PartialQuestionEntity{
     @ApiProperty({enum: Categories, required: false})
     category?: Categories;
 
-    correctAnswer: string;
-    incorrectAnswers: string[];
-    userId?: string;
+    answers: string[];
+    position: number;
 }

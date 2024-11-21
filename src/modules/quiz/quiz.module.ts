@@ -8,5 +8,6 @@ import {QuestionsModule} from "../questions/questions.module";
     controllers: [QuizController],
     providers: [QuizService],
     imports: [ServicesModule, QuestionsModule],
+    exports: [QuizService],
 })
 export class QuizModule{}

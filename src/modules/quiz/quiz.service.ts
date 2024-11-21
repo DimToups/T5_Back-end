@@ -2,8 +2,9 @@ import {
     BadRequestException,
     ConflictException,
     ForbiddenException,
-    Injectable, NotFoundException,
-    UnauthorizedException
+    Injectable,
+    NotFoundException,
+    UnauthorizedException,
 } from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {Categories, Difficulties, Quiz, QuizQuestions} from "@prisma/client";
@@ -15,6 +16,7 @@ import {QuestionsService} from "../questions/questions.service";
 import {UserEntity} from "../users/models/entities/user.entity";
 import {PublicQuizEntity} from "./models/entity/public-quiz.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
+import {UserQuizEntity} from "./models/entity/user-quiz.entity";
 
 @Injectable()
 export class QuizService{
@@ -34,7 +36,7 @@ export class QuizService{
                 difficulty,
                 category,
                 user_id: user?.id,
-            }
+            },
         });
         return new QuizEntity({
             id: quizId,
@@ -56,9 +58,9 @@ export class QuizService{
                 quiz_questions: {
                     include: {
                         question: true,
-                    }
-                }
-            }
+                    },
+                },
+            },
         });
         if(!quiz)
             throw new NotFoundException("This quiz doesn't exist.");
@@ -97,7 +99,7 @@ export class QuizService{
         user: UserEntity,
         description?: string,
         difficulty?: Difficulties,
-        category?: Categories
+        category?: Categories,
     ): Promise<QuizEntity>{
         let quiz: Quiz = await this.prismaService.quiz.findUnique({
             where: {
@@ -122,12 +124,12 @@ export class QuizService{
                 description,
                 difficulty,
                 category,
-            }
+            },
         });
         await this.prismaService.quizQuestions.deleteMany({
             where: {
                 quiz_id: quizId,
-            }
+            },
         });
         const questions: QuestionEntity[] = await this.questionsService.addPartialQuestionsToDatabase(partialQuestions);
         await this.prismaService.quizQuestions.createMany({
@@ -137,7 +139,7 @@ export class QuizService{
                     question_id: question.sum,
                     position: questions.findIndex((q: QuestionEntity): boolean => q.sum === question.sum),
                 } as QuizQuestions;
-            })
+            }),
         });
         return new QuizEntity({
             id: quiz.id,
@@ -156,8 +158,8 @@ export class QuizService{
                 id: quizId,
             },
             include: {
-                quiz_questions: true
-            }
+                quiz_questions: true,
+            },
         });
         if(!quiz)
             throw new NotFoundException("This quiz doesn't exist.");
@@ -175,7 +177,7 @@ export class QuizService{
             },
             data: {
                 published: true,
-            }
+            },
         });
     }
 
@@ -185,8 +187,8 @@ export class QuizService{
                 id: quizId,
             },
             include: {
-                quiz_questions: true
-            }
+                quiz_questions: true,
+            },
         });
         if(!quiz)
             throw new NotFoundException("This quiz doesn't exist.");
@@ -208,7 +210,7 @@ export class QuizService{
         difficulty?: Difficulties,
         category?: Categories,
         take?: number,
-        skip?: number
+        skip?: number,
     ): Promise<PaginationResponse<PublicQuizEntity[]>>{
         const quizzes: any[] = await this.prismaService.quiz.findMany({
             where: {
@@ -220,7 +222,7 @@ export class QuizService{
                 category: category || undefined,
             },
             include: {
-                quiz_questions: true
+                quiz_questions: true,
             },
             take: take || 50,
             skip: skip || 0,
@@ -250,5 +252,27 @@ export class QuizService{
             take: take || 50,
             skip: skip || 0,
         };
+    }
+
+    async getQuizzes(user: UserEntity): Promise<UserQuizEntity[]>{
+        const quizzes: any[] = await this.prismaService.quiz.findMany({
+            where: {
+                user_id: user.id,
+            },
+            include: {
+                quiz_questions: true,
+            },
+        });
+        return quizzes.map((quiz: any): UserQuizEntity => {
+            return {
+                id: quiz.id,
+                title: quiz.title,
+                description: quiz.description || undefined,
+                questionCount: quiz.quiz_questions.length,
+                published: quiz.published,
+                difficulty: quiz.difficulty || undefined,
+                category: quiz.category || undefined,
+            } as UserQuizEntity;
+        });
     }
 }

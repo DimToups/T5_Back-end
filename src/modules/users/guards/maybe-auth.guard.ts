@@ -3,10 +3,10 @@ import {PrismaService} from "../../../common/services/prisma.service";
 import {FastifyRequest} from "fastify";
 import {UserEntity} from "../models/entities/user.entity";
 import {MaybeAuthenticatedRequest} from "../models/models/maybe-authenticated-request";
+import {Sessions} from "@prisma/client";
 
 @Injectable()
 export class MaybeAuthGuard implements CanActivate{
-
     constructor(
         private readonly prismaService: PrismaService,
     ){}
@@ -21,7 +21,7 @@ export class MaybeAuthGuard implements CanActivate{
         const sessionId = this.extractTokenFromHeader(request);
         if(!sessionId)
             return true;
-        const session = await this.prismaService.sessions.findUnique({where: {id: sessionId}});
+        const session: Sessions = await this.prismaService.sessions.findUnique({where: {id: sessionId}});
         if(!session)
             return true;
         if(session.expire_at < new Date()){

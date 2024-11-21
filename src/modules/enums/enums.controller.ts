@@ -6,7 +6,6 @@ import {CacheTTL} from "@nestjs/cache-manager";
 @Controller("enums")
 @ApiTags("Enums")
 export class EnumsController{
-
     /**
      * Get the difficulties
      *

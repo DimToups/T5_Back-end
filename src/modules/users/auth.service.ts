@@ -1,7 +1,7 @@
 import {Injectable, NotFoundException, UnauthorizedException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {CipherService} from "../../common/services/cipher.service";
-import {Sessions} from "@prisma/client";
+import {Sessions, Users} from "@prisma/client";
 
 @Injectable()
 export class AuthService{
@@ -11,7 +11,7 @@ export class AuthService{
     ){}
 
     async createSession(username: string, password: string): Promise<string>{
-        const user = await this.prismaService.users.findFirst({
+        const user: Users = await this.prismaService.users.findFirst({
             where: {
                 username,
             },

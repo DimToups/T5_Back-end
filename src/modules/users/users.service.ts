@@ -37,11 +37,11 @@ export class UsersService{
     }
 
     async getUserFromEmail(email: string): Promise<UserEntity>{
-        return new UserEntity(await this.prismaService.users.findFirst({
+        return await this.prismaService.users.findFirst({
             where: {
                 email,
             },
-        }));
+        });
     }
 
     async getUserProfile(userId: string): Promise<UserProfileEntity>{

@@ -11,6 +11,7 @@ import {EnumsModule} from "./modules/enums/enums.module";
 import {CronModule} from "./modules/cron/cron.module";
 import {QuestionsModule} from "./modules/questions/questions.module";
 import {QuizModule} from "./modules/quiz/quiz.module";
+import {GamesModule} from "./modules/games/games.module";
 
 dotenv.config();
 
@@ -29,12 +30,13 @@ dotenv.config();
         CronModule,
         QuestionsModule,
         QuizModule,
+        GamesModule,
     ],
     providers: [
         {
             provide: APP_INTERCEPTOR,
             useClass: ClassSerializerInterceptor,
-        }
-    ]
+        },
+    ],
 })
 export class AppModule{}

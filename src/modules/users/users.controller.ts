@@ -4,13 +4,15 @@ import {
     Body,
     Controller,
     Delete,
-    Get, HttpCode,
+    Get,
+    HttpCode,
     HttpStatus,
     NotFoundException,
-    Param, Patch,
+    Param,
+    Patch,
     Post,
     Req,
-    UseGuards
+    UseGuards,
 } from "@nestjs/common";
 import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {CreateUserResponse} from "./models/responses/create-user.response";
@@ -41,7 +43,7 @@ export class UsersController{
     async createUser(@Body() createUserDto: CreateUserDto): Promise<CreateUserResponse>{
         const user: UserEntity = await this.usersService.createUser(createUserDto.username, createUserDto.email, createUserDto.password);
         const session: string = await this.authService.createSession(user.username, createUserDto.password);
-        return new CreateUserResponse(user, session);
+        return new CreateUserResponse(new UserEntity(user), session);
     }
 
     /**
@@ -57,7 +59,7 @@ export class UsersController{
         if(!user)
             throw new NotFoundException("User not found");
         const session: string = await this.authService.createSession(user.username, loginUserDto.password);
-        return new CreateUserResponse(user, session);
+        return new CreateUserResponse(new UserEntity(user), session);
     }
 
     @Delete("logout")

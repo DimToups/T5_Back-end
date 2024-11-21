@@ -10,7 +10,7 @@ import {
     Query,
     Req,
     Res,
-    UseGuards
+    UseGuards,
 } from "@nestjs/common";
 import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {QuizService} from "./quiz.service";
@@ -23,6 +23,8 @@ import {PublicQuizEntity} from "./models/entity/public-quiz.entity";
 import {FastifyReply} from "fastify";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 import {GetPublicQuizDto} from "./models/dto/get-public-quiz.dto";
+import {AuthGuard} from "../users/guards/auth.guard";
+import {UserQuizEntity} from "./models/entity/user-quiz.entity";
 
 @Controller("quiz")
 @ApiTags("Quiz")
@@ -54,7 +56,7 @@ export class QuizController{
      * @throws {500} Internal Server Error
      */
     @Get(":quiz_id")
-    async getQuiz(@Param("quiz_id") quizId: string): Promise<QuizEntity>{
+    async getQuizById(@Param("quiz_id") quizId: string): Promise<QuizEntity>{
         return this.quizService.getQuizDataById(quizId);
     }
 
@@ -117,4 +119,16 @@ export class QuizController{
         return quiz.data;
     }
 
+    /**
+     * Get user quizzes
+     *
+     * @throws {401} Unauthorized
+     * @throws {500} Internal Server Error
+     */
+    @Get()
+    @UseGuards(AuthGuard)
+    @ApiBearerAuth()
+    async getQuizzes(@Req() req: MaybeAuthenticatedRequest): Promise<UserQuizEntity[]>{
+        return this.quizService.getQuizzes(req.user);
+    }
 }

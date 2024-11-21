@@ -5,7 +5,7 @@ import {faker} from "@faker-js/faker/locale/en";
 export class CreateUserResponse{
     user: UserEntity;
     @ApiProperty({example: faker.string.uuid()})
-        session: string;
+    session: string;
 
     constructor(user: UserEntity, session: string){
         this.user = user;

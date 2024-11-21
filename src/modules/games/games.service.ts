@@ -1,0 +1,256 @@
+import {ForbiddenException, Injectable, NotFoundException, UnauthorizedException} from "@nestjs/common";
+import {PrismaService} from "../../common/services/prisma.service";
+import {UserEntity} from "../users/models/entities/user.entity";
+import {Categories, Difficulties, Games, Questions, QuizQuestions} from "@prisma/client";
+import {CipherService} from "../../common/services/cipher.service";
+import {GameEntity} from "./models/entities/game.entity";
+import {PublicQuestionEntity} from "./models/entities/public-question.entity";
+import {SubmitAnswerResponse} from "./models/submit-answer.response";
+import {QuizService} from "../quiz/quiz.service";
+import {QuestionsService} from "../questions/questions.service";
+import {QuestionEntity} from "../questions/models/entities/question.entity";
+import {QuizEntity} from "../quiz/models/entity/quiz.entity";
+
+@Injectable()
+export class GamesService{
+    constructor(
+        private readonly prismaService: PrismaService,
+        private readonly cipherService: CipherService,
+        private readonly quizService: QuizService,
+        private readonly questionsService: QuestionsService,
+    ){}
+
+    private generateQuizCode(): string{
+        return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    async getGame(gameId: string, user?: UserEntity): Promise<GameEntity>{
+        const game: any = await this.prismaService.games.findFirst({
+            where: {
+                id: gameId,
+            },
+            include: {
+                quiz: {
+                    include: {
+                        quiz_questions: true,
+                    },
+                },
+            },
+        });
+        if(!game)
+            throw new NotFoundException("This game doesn't exist.");
+        if(!user && game.user_id)
+            throw new UnauthorizedException("You're not allowed to access this game.");
+        if(user && game.user_id && game.user_id !== user.id)
+            throw new ForbiddenException("You're not allowed to access this game.");
+        return {
+            id: game.id,
+            quizId: game.quiz_id,
+            userId: game.user_id,
+            questionCount: game.quiz.quiz_questions.length,
+            currentQuestion: game.current_question,
+            score: game.score,
+            code: game.code,
+            createdAt: game.created_at,
+            updatedAt: game.updated_at,
+            endedAt: game.ended_at,
+        } as GameEntity;
+    }
+
+    async getGameByCode(gameCode: string, user?: UserEntity): Promise<GameEntity>{
+        const game: any = await this.prismaService.games.findFirst({
+            where: {
+                code: gameCode,
+            },
+            include: {
+                quiz: {
+                    include: {
+                        quiz_questions: true,
+                    },
+                },
+            },
+        });
+        if(!game)
+            throw new NotFoundException("This game doesn't exist.");
+        if(!user && game.user_id)
+            throw new UnauthorizedException("You're not allowed to access this game.");
+        if(user && game.user_id && game.user_id !== user.id)
+            throw new ForbiddenException("You're not allowed to access this game.");
+        return {
+            id: game.id,
+            quizId: game.quiz_id,
+            userId: game.user_id,
+            questionCount: game.quiz.quiz_questions.length,
+            currentQuestion: game.current_question,
+            score: game.score,
+            code: game.code,
+            createdAt: game.created_at,
+            updatedAt: game.updated_at,
+            endedAt: game.ended_at,
+        } as GameEntity;
+    }
+
+    async startGame(quizId: string, user?: UserEntity): Promise<GameEntity>{
+        const quiz: any = await this.prismaService.quiz.findUnique({
+            where: {
+                id: quizId,
+            },
+            include: {
+                quiz_questions: true,
+            },
+        });
+        if(!quiz)
+            throw new NotFoundException("This quiz doesn't exist.");
+        if(!quiz.published)
+            throw new UnauthorizedException("This quiz isn't published yet.");
+        const game: Games = await this.prismaService.games.create({
+            data: {
+                id: this.cipherService.generateUuid(7),
+                quiz_id: quizId,
+                user_id: user?.id,
+                code: this.generateQuizCode(),
+            },
+        });
+        return {
+            id: game.id,
+            quizId: game.quiz_id,
+            userId: game.user_id,
+            questionCount: quiz.quiz_questions.length,
+            currentQuestion: game.current_question,
+            score: game.score,
+            code: game.code,
+            createdAt: game.created_at,
+            updatedAt: game.updated_at,
+            endedAt: game.ended_at,
+        } as GameEntity;
+    }
+
+    async getGames(userId: string): Promise<GameEntity[]>{
+        const games: any[] = await this.prismaService.games.findMany({
+            where: {
+                user_id: userId,
+            },
+            include: {
+                quiz: {
+                    include: {
+                        quiz_questions: true,
+                    },
+                },
+            },
+        });
+        return games.map((game: any) => {
+            return {
+                id: game.id,
+                quizId: game.quiz_id,
+                userId: game.user_id,
+                questionCount: game.quiz.quiz_questions.length,
+                currentQuestion: game.current_question,
+                score: game.score,
+                code: game.code,
+                createdAt: game.created_at,
+                updatedAt: game.updated_at,
+                endedAt: game.ended_at,
+            } as GameEntity;
+        });
+    }
+
+    async getCurrentQuestion(gameId: string, user?: UserEntity): Promise<PublicQuestionEntity>{
+        const game: Games = await this.prismaService.games.findUnique({
+            where: {
+                id: gameId,
+            },
+        });
+        if(!game)
+            throw new NotFoundException("Game not found");
+        if(!user && game.user_id)
+            throw new UnauthorizedException("You're not allowed to access this game.");
+        if(user && game.user_id && game.user_id !== user.id)
+            throw new ForbiddenException("You're not allowed to access this game.");
+        const quiz: any = await this.prismaService.quiz.findUnique({
+            where: {
+                id: game.quiz_id,
+            },
+            include: {
+                quiz_questions: {
+                    include: {
+                        question: true,
+                    },
+                },
+            },
+        });
+        const questions: Questions[] = quiz.quiz_questions.map((quizQuestion: any): QuizQuestions => quizQuestion.question);
+        const question: Questions = questions[game.current_question];
+        if(!question)
+            throw new NotFoundException("Question not found");
+        if(question.incorrect_answers.length === 3)
+            return {
+                sum: question.sum,
+                question: question.question,
+                difficulty: question.difficulty,
+                category: question.category,
+                answers: question.incorrect_answers.concat(question.correct_answer).sort(() => Math.random() - 0.5),
+                position: game.current_question + 1,
+            };
+        else
+            return {
+                sum: question.sum,
+                question: question.question,
+                difficulty: question.difficulty,
+                category: question.category,
+                answers: question.incorrect_answers.concat(question.correct_answer),
+                position: game.current_question + 1,
+            };
+    }
+
+    async answerQuestion(gameId: string, answer?: string, user?: UserEntity): Promise<SubmitAnswerResponse>{
+        // GetCurrentQuestion already check game ownership
+        const currentQuestion: PublicQuestionEntity = await this.getCurrentQuestion(gameId, user);
+        const question: Questions = await this.prismaService.questions.findUnique({
+            where: {
+                sum: currentQuestion.sum,
+            },
+        });
+        const isCorrect: boolean = question.correct_answer.toLowerCase() === answer?.toLowerCase();
+        const game: Games = await this.prismaService.games.update({
+            where: {
+                id: gameId,
+            },
+            data: {
+                current_question: {
+                    increment: 1,
+                },
+                score: {
+                    increment: isCorrect ? 1 : 0,
+                },
+            },
+        });
+        let nextQuestion: PublicQuestionEntity | undefined;
+        try{
+            nextQuestion = await this.getCurrentQuestion(game.id, user);
+        }catch(_){
+            // Only possible error is question not found (end of quiz)
+            await this.prismaService.games.update({
+                where: {
+                    id: gameId,
+                },
+                data: {
+                    ended_at: new Date(),
+                },
+            });
+        }
+        return {
+            isCorrect,
+            correctAnswer: question.correct_answer,
+            score: game.score,
+            nextQuestion,
+        };
+    }
+
+    async createQuickGame(amount: number, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<GameEntity>{
+        const questions: QuestionEntity[] = await this.questionsService.generateQuestions(amount, difficulty, category);
+        let quiz: QuizEntity = await this.quizService.createQuiz("", "", difficulty, category, user);
+        quiz = await this.quizService.updateQuiz(quiz.id, `Quick game ${quiz.id}`, questions, user, "Quick game", difficulty, category);
+        await this.quizService.publishQuiz(quiz.id, user);
+        return await this.startGame(quiz.id, user);
+    }
+}

@@ -6,7 +6,6 @@ import {AuthenticatedRequest} from "../models/models/authenticated-request";
 
 @Injectable()
 export class AuthGuard implements CanActivate{
-
     constructor(
         private readonly prismaService: PrismaService,
     ){}

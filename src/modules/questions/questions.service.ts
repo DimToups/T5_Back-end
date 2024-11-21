@@ -10,7 +10,6 @@ import {PaginationResponse} from "../../common/models/responses/pagination.respo
 
 @Injectable()
 export class QuestionsService{
-
     private static readonly BASE_URL = "https://opentdb.com";
 
     constructor(
@@ -27,7 +26,7 @@ export class QuestionsService{
     async generateQuestions(amount: number, difficulty?: Difficulties, category?: Categories): Promise<QuestionEntity[]>{
         const categoryId: number = category ? Object.keys(Categories).indexOf(Categories[category]) + 9 : undefined; // Offset
         const questions: any[] = await this.fetchQuestions(amount, categoryId, difficulty);
-        const formattedQuestions: PartialQuestionEntity[] = questions.map(question => {
+        const formattedQuestions: PartialQuestionEntity[] = questions.map((question) => {
             return {
                 question: he.decode(question.question),
                 difficulty: Difficulties[he.decode(question.difficulty).toUpperCase()],
@@ -36,7 +35,7 @@ export class QuestionsService{
                 incorrectAnswers: question.incorrect_answers.map((answer: string) => he.decode(answer)),
             };
         });
-        return formattedQuestions.map(question => {
+        return formattedQuestions.map((question) => {
             return new QuestionEntity({
                 sum: this.generateQuestionSum(question),
                 question: question.question,
@@ -60,7 +59,7 @@ export class QuestionsService{
             const res: Response = await fetch(`${QuestionsService.BASE_URL}/api.php?amount=${questionCount}${categoryOption}${difficultyOption}`);
             const data: any = await res.json();
             return data.results;
-        }catch (e){
+        }catch(e){
             throw new InternalServerErrorException(e);
         }
     }
@@ -71,7 +70,7 @@ export class QuestionsService{
         difficulty?: Difficulties,
         category?: Categories,
         take?: number,
-        skip?: number
+        skip?: number,
     ): Promise<PaginationResponse<QuestionEntity[]>>{
         const questions: Questions[] = await this.prismaService.questions.findMany({
             where: {
