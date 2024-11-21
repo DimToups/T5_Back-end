@@ -1,9 +1,14 @@
-import {Controller, Get, Param, Post, Req, UseGuards} from "@nestjs/common";
+import {Body, Controller, Get, NotImplementedException, Param, Post, Req, UseGuards} from "@nestjs/common";
 import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {GamesService} from "./games.service";
 import {MaybeAuthGuard} from "../users/guards/maybe-auth.guard";
 import {GameEntity} from "./models/entities/game.entity";
 import {MaybeAuthenticatedRequest} from "../users/models/models/maybe-authenticated-request";
+import {AuthGuard} from "../users/guards/auth.guard";
+import {AuthenticatedRequest} from "../users/models/models/authenticated-request";
+import {PublicQuestionEntity} from "./models/entities/public-question.entity";
+import {SubmitAnswerDto} from "./models/dto/submit-answer.dto";
+import {SubmitAnswerResponse} from "./models/submit-answer.response";
 
 @Controller("games")
 @ApiTags("Games")
@@ -34,10 +39,72 @@ export class GamesController{
      * @throws {404} NotFoundException
      * @throws {500} InternalServerErrorException
      */
-    @Get(":game_id")
+    @Get("id/:game_id")
     @UseGuards(MaybeAuthGuard)
     @ApiBearerAuth()
     async getGame(@Req() req: MaybeAuthenticatedRequest, @Param("game_id") gameId: string): Promise<GameEntity>{
         return this.gamesService.getGame(gameId, req.user);
+    }
+
+    @Get("code/:game_code")
+    @UseGuards(MaybeAuthGuard)
+    @ApiBearerAuth()
+    async getGameByCode(@Req() req: MaybeAuthenticatedRequest, @Param("game_code") gameCode: string): Promise<GameEntity>{
+        return this.gamesService.getGameByCode(gameCode, req.user);
+    }
+
+    /**
+     * Get all user games
+     *
+     * @throws {401} UnauthorizedException
+     * @throws {500} InternalServerErrorException
+     */
+    @Get()
+    @UseGuards(AuthGuard)
+    @ApiBearerAuth()
+    async getGames(@Req() req: AuthenticatedRequest): Promise<GameEntity[]>{
+        return this.gamesService.getGames(req.user.id);
+    }
+
+    /**
+     * Get game statistics (WIP)
+     *
+     * @throws {501} NotImplementedException
+     */
+    @Get(":game_id/statistics")
+    @UseGuards(AuthGuard)
+    @ApiBearerAuth()
+    async getGameStatistics(): Promise<void>{
+        throw new NotImplementedException();
+    }
+
+    /**
+     * Get current question of a game
+     *
+     * @throws {401} UnauthorizedException
+     * @throws {403} ForbiddenException
+     * @throws {404} NotFoundException
+     * @throws {500} InternalServerErrorException
+     */
+    @Get(":game_id/question")
+    @UseGuards(MaybeAuthGuard)
+    @ApiBearerAuth()
+    async getQuestion(@Req() req: MaybeAuthenticatedRequest, @Param("game_id") gameId: string): Promise<PublicQuestionEntity>{
+        return this.gamesService.getCurrentQuestion(gameId, req.user);
+    }
+
+    /**
+     * Submit an answer for the current question
+     *
+     * @throws {401} UnauthorizedException
+     * @throws {403} ForbiddenException
+     * @throws {404} NotFoundException
+     * @throws {500} InternalServerErrorException
+     */
+    @Post(":game_id/answer")
+    @UseGuards(MaybeAuthGuard)
+    @ApiBearerAuth()
+    async answerQuestion(@Req() req: MaybeAuthenticatedRequest, @Param("game_id") gameId: string, @Body() body: SubmitAnswerDto): Promise<SubmitAnswerResponse>{
+        return this.gamesService.answerQuestion(gameId, body.answer, req.user);
     }
 }
