@@ -9,6 +9,7 @@ import {AuthenticatedRequest} from "../users/models/models/authenticated-request
 import {PublicQuestionEntity} from "./models/entities/public-question.entity";
 import {SubmitAnswerDto} from "./models/dto/submit-answer.dto";
 import {SubmitAnswerResponse} from "./models/submit-answer.response";
+import {GenerateQuestionDto} from "../questions/models/dto/generate-question.dto";
 
 @Controller("games")
 @ApiTags("Games")
@@ -106,5 +107,18 @@ export class GamesController{
     @ApiBearerAuth()
     async answerQuestion(@Req() req: MaybeAuthenticatedRequest, @Param("game_id") gameId: string, @Body() body: SubmitAnswerDto): Promise<SubmitAnswerResponse>{
         return this.gamesService.answerQuestion(gameId, body.answer, req.user);
+    }
+
+    /**
+     * Create a quick game
+     *
+     * @throws {400} BadRequestException
+     * @throws {500} InternalServerErrorException
+     */
+    @Post("quick")
+    @UseGuards(MaybeAuthGuard)
+    @ApiBearerAuth()
+    async quickGame(@Req() req: MaybeAuthenticatedRequest, @Body() body: GenerateQuestionDto): Promise<GameEntity>{
+        return this.gamesService.createQuickGame(body.amount, body.difficulty, body.category, req.user);
     }
 }

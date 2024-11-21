@@ -1,17 +1,23 @@
 import {ForbiddenException, Injectable, NotFoundException, UnauthorizedException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {UserEntity} from "../users/models/entities/user.entity";
-import {Games, Questions, Quiz, QuizQuestions} from "@prisma/client";
+import {Categories, Difficulties, Games, Questions, QuizQuestions} from "@prisma/client";
 import {CipherService} from "../../common/services/cipher.service";
 import {GameEntity} from "./models/entities/game.entity";
 import {PublicQuestionEntity} from "./models/entities/public-question.entity";
 import {SubmitAnswerResponse} from "./models/submit-answer.response";
+import {QuizService} from "../quiz/quiz.service";
+import {QuestionsService} from "../questions/questions.service";
+import {QuestionEntity} from "../questions/models/entities/question.entity";
+import {QuizEntity} from "../quiz/models/entity/quiz.entity";
 
 @Injectable()
 export class GamesService{
     constructor(
         private readonly prismaService: PrismaService,
         private readonly cipherService: CipherService,
+        private readonly quizService: QuizService,
+        private readonly questionsService: QuestionsService,
     ){}
 
     private generateQuizCode(): string{
@@ -19,33 +25,16 @@ export class GamesService{
     }
 
     async getGame(gameId: string, user?: UserEntity): Promise<GameEntity>{
-        const game: Games = await this.prismaService.games.findFirst({
+        const game: any = await this.prismaService.games.findFirst({
             where: {
                 id: gameId,
             },
-        });
-        if(!game)
-            throw new NotFoundException("This game doesn't exist.");
-        if(!user && game.user_id)
-            throw new UnauthorizedException("You're not allowed to access this game.");
-        if(user && game.user_id && game.user_id !== user.id)
-            throw new ForbiddenException("You're not allowed to access this game.");
-        return {
-            id: game.id,
-            quizId: game.quiz_id,
-            userId: game.user_id,
-            currentQuestion: game.current_question,
-            score: game.score,
-            code: game.code,
-            createdAt: game.created_at,
-            updatedAt: game.updated_at,
-        } as GameEntity;
-    }
-
-    async getGameByCode(gameCode: string, user?: UserEntity){
-        const game: Games = await this.prismaService.games.findFirst({
-            where: {
-                code: gameCode,
+            include: {
+                quiz: {
+                    include: {
+                        quiz_questions: true,
+                    },
+                },
             },
         });
         if(!game)
@@ -58,18 +47,56 @@ export class GamesService{
             id: game.id,
             quizId: game.quiz_id,
             userId: game.user_id,
+            questionCount: game.quiz.quiz_questions.length,
             currentQuestion: game.current_question,
             score: game.score,
             code: game.code,
             createdAt: game.created_at,
             updatedAt: game.updated_at,
+            endedAt: game.ended_at,
+        } as GameEntity;
+    }
+
+    async getGameByCode(gameCode: string, user?: UserEntity): Promise<GameEntity>{
+        const game: any = await this.prismaService.games.findFirst({
+            where: {
+                code: gameCode,
+            },
+            include: {
+                quiz: {
+                    include: {
+                        quiz_questions: true,
+                    },
+                },
+            },
+        });
+        if(!game)
+            throw new NotFoundException("This game doesn't exist.");
+        if(!user && game.user_id)
+            throw new UnauthorizedException("You're not allowed to access this game.");
+        if(user && game.user_id && game.user_id !== user.id)
+            throw new ForbiddenException("You're not allowed to access this game.");
+        return {
+            id: game.id,
+            quizId: game.quiz_id,
+            userId: game.user_id,
+            questionCount: game.quiz.quiz_questions.length,
+            currentQuestion: game.current_question,
+            score: game.score,
+            code: game.code,
+            createdAt: game.created_at,
+            updatedAt: game.updated_at,
+            endedAt: game.ended_at,
         } as GameEntity;
     }
 
     async startGame(quizId: string, user?: UserEntity): Promise<GameEntity>{
-        const quiz: Quiz = await this.prismaService.quiz.findUnique({
+        const quiz: any = await this.prismaService.quiz.findUnique({
             where: {
                 id: quizId,
+            },
+            include: {
+                quiz_questions: true,
             },
         });
         if(!quiz)
@@ -88,30 +115,41 @@ export class GamesService{
             id: game.id,
             quizId: game.quiz_id,
             userId: game.user_id,
+            questionCount: quiz.quiz_questions.length,
             currentQuestion: game.current_question,
             score: game.score,
             code: game.code,
             createdAt: game.created_at,
             updatedAt: game.updated_at,
+            endedAt: game.ended_at,
         } as GameEntity;
     }
 
     async getGames(userId: string): Promise<GameEntity[]>{
-        const games: Games[] = await this.prismaService.games.findMany({
+        const games: any[] = await this.prismaService.games.findMany({
             where: {
                 user_id: userId,
             },
+            include: {
+                quiz: {
+                    include: {
+                        quiz_questions: true,
+                    },
+                },
+            },
         });
-        return games.map((game: Games) => {
+        return games.map((game: any) => {
             return {
                 id: game.id,
                 quizId: game.quiz_id,
                 userId: game.user_id,
+                questionCount: game.quiz.quiz_questions.length,
                 currentQuestion: game.current_question,
                 score: game.score,
                 code: game.code,
                 createdAt: game.created_at,
                 updatedAt: game.updated_at,
+                endedAt: game.ended_at,
             } as GameEntity;
         });
     }
@@ -206,5 +244,13 @@ export class GamesService{
             score: game.score,
             nextQuestion,
         };
+    }
+
+    async createQuickGame(amount: number, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<GameEntity>{
+        const questions: QuestionEntity[] = await this.questionsService.generateQuestions(amount, difficulty, category);
+        let quiz: QuizEntity = await this.quizService.createQuiz("", "", difficulty, category, user);
+        quiz = await this.quizService.updateQuiz(quiz.id, `Quick game ${quiz.id}`, questions, user, "Quick game", difficulty, category);
+        await this.quizService.publishQuiz(quiz.id, user);
+        return await this.startGame(quiz.id, user);
     }
 }
