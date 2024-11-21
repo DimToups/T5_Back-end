@@ -2,7 +2,8 @@ import {
     BadRequestException,
     ConflictException,
     ForbiddenException,
-    Injectable, NotFoundException,
+    Injectable,
+    NotFoundException,
     UnauthorizedException,
 } from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
@@ -15,6 +16,7 @@ import {QuestionsService} from "../questions/questions.service";
 import {UserEntity} from "../users/models/entities/user.entity";
 import {PublicQuizEntity} from "./models/entity/public-quiz.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
+import {UserQuizEntity} from "./models/entity/user-quiz.entity";
 
 @Injectable()
 export class QuizService{
@@ -250,5 +252,27 @@ export class QuizService{
             take: take || 50,
             skip: skip || 0,
         };
+    }
+
+    async getQuizzes(user: UserEntity): Promise<UserQuizEntity[]>{
+        const quizzes: any[] = await this.prismaService.quiz.findMany({
+            where: {
+                user_id: user.id,
+            },
+            include: {
+                quiz_questions: true,
+            },
+        });
+        return quizzes.map((quiz: any): UserQuizEntity => {
+            return {
+                id: quiz.id,
+                title: quiz.title,
+                description: quiz.description || undefined,
+                questionCount: quiz.quiz_questions.length,
+                published: quiz.published,
+                difficulty: quiz.difficulty || undefined,
+                category: quiz.category || undefined,
+            } as UserQuizEntity;
+        });
     }
 }

@@ -8,12 +8,12 @@ export class GenerateQuestionDto{
     @Max(50)
     amount: number;
 
-    @ApiProperty({enum: Difficulties, required: false})
+    @ApiProperty({enum: Difficulties})
     @IsString()
     @IsOptional()
     difficulty?: Difficulties;
 
-    @ApiProperty({enum: Categories, required: false})
+    @ApiProperty({enum: Categories})
     @IsString()
     @IsOptional()
     category?: Categories;
