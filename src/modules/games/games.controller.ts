@@ -12,6 +12,7 @@ import {SubmitAnswerResponse} from "./models/submit-answer.response";
 import {GenerateQuestionDto} from "../questions/models/dto/generate-question.dto";
 import {FastifyReply} from "fastify";
 import {PaginationDto} from "../../common/models/dto/pagination.dto";
+import {PaginationResponse} from "../../common/models/responses/pagination.response";
 
 @Controller("games")
 @ApiTags("Games")
@@ -66,11 +67,11 @@ export class GamesController{
     @UseGuards(AuthGuard)
     @ApiBearerAuth()
     async getGames(@Req() req: AuthenticatedRequest, @Res({passthrough: true}) res: FastifyReply, @Query() query: PaginationDto): Promise<GameEntity[]>{
-        const games: GameEntity[] = await this.gamesService.getGames(req.user.id, query.take, query.skip);
-        res.header("X-Total-Count", games.length);
+        const games: PaginationResponse<GameEntity[]> = await this.gamesService.getGames(req.user.id, query.take, query.skip);
+        res.header("X-Total-Count", games.total.toString());
         res.header("X-Take", query.take.toString());
         res.header("X-Skip", query.skip.toString());
-        return games;
+        return games.data;
     }
 
     /**

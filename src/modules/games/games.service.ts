@@ -10,6 +10,7 @@ import {QuizService} from "../quiz/quiz.service";
 import {QuestionsService} from "../questions/questions.service";
 import {QuestionEntity} from "../questions/models/entities/question.entity";
 import {QuizEntity} from "../quiz/models/entity/quiz.entity";
+import {PaginationResponse} from "../../common/models/responses/pagination.response";
 
 @Injectable()
 export class GamesService{
@@ -125,7 +126,7 @@ export class GamesService{
         } as GameEntity;
     }
 
-    async getGames(userId: string, take?: number, skip?: number): Promise<GameEntity[]>{
+    async getGames(userId: string, take?: number, skip?: number): Promise<PaginationResponse<GameEntity[]>>{
         const games: any[] = await this.prismaService.games.findMany({
             where: {
                 user_id: userId,
@@ -140,7 +141,7 @@ export class GamesService{
             take: take || 50,
             skip: skip || 0,
         });
-        return games.map((game: any) => {
+        const data: GameEntity[] = games.map((game: any) => {
             return {
                 id: game.id,
                 quizId: game.quiz_id,
@@ -154,6 +155,16 @@ export class GamesService{
                 endedAt: game.ended_at,
             } as GameEntity;
         });
+        return {
+            data,
+            total: await this.prismaService.games.count({
+                where: {
+                    user_id: userId,
+                },
+            }),
+            take: take || 50,
+            skip: skip || 0,
+        } as PaginationResponse<GameEntity[]>;
     }
 
     async getCurrentQuestion(gameId: string, user?: UserEntity): Promise<PublicQuestionEntity>{

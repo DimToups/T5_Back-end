@@ -130,10 +130,10 @@ export class QuizController{
     @UseGuards(AuthGuard)
     @ApiBearerAuth()
     async getQuizzes(@Req() req: MaybeAuthenticatedRequest, @Res({passthrough: true}) res: FastifyReply, @Query() query: PaginationDto): Promise<UserQuizEntity[]>{
-        const quizzes: UserQuizEntity[] = await this.quizService.getQuizzes(req.user, query.take, query.skip);
-        res.header("X-Total-Count", quizzes.length.toString());
-        res.header("X-Take", query.take.toString());
-        res.header("X-Skip", query.skip.toString());
-        return quizzes;
+        const quizzes: PaginationResponse<UserQuizEntity[]> = await this.quizService.getQuizzes(req.user, query.take, query.skip);
+        res.header("X-Total-Count", quizzes.total.toString());
+        res.header("X-Take", quizzes.take.toString());
+        res.header("X-Skip", quizzes.skip.toString());
+        return quizzes.data;
     }
 }
