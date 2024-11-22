@@ -254,7 +254,7 @@ export class QuizService{
         };
     }
 
-    async getQuizzes(user: UserEntity): Promise<UserQuizEntity[]>{
+    async getQuizzes(user: UserEntity, take?: number, skip?: number): Promise<UserQuizEntity[]>{
         const quizzes: any[] = await this.prismaService.quiz.findMany({
             where: {
                 user_id: user.id,
@@ -262,6 +262,8 @@ export class QuizService{
             include: {
                 quiz_questions: true,
             },
+            take: take || 50,
+            skip: skip || 0,
         });
         return quizzes.map((quiz: any): UserQuizEntity => {
             return {

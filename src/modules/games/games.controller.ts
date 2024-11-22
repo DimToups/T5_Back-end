@@ -1,4 +1,4 @@
-import {Body, Controller, Get, NotImplementedException, Param, Post, Req, UseGuards} from "@nestjs/common";
+import {Body, Controller, Get, NotImplementedException, Param, Post, Query, Req, Res, UseGuards} from "@nestjs/common";
 import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {GamesService} from "./games.service";
 import {MaybeAuthGuard} from "../users/guards/maybe-auth.guard";
@@ -10,6 +10,8 @@ import {PublicQuestionEntity} from "./models/entities/public-question.entity";
 import {SubmitAnswerDto} from "./models/dto/submit-answer.dto";
 import {SubmitAnswerResponse} from "./models/submit-answer.response";
 import {GenerateQuestionDto} from "../questions/models/dto/generate-question.dto";
+import {FastifyReply} from "fastify";
+import {PaginationDto} from "../../common/models/dto/pagination.dto";
 
 @Controller("games")
 @ApiTags("Games")
@@ -63,8 +65,12 @@ export class GamesController{
     @Get()
     @UseGuards(AuthGuard)
     @ApiBearerAuth()
-    async getGames(@Req() req: AuthenticatedRequest): Promise<GameEntity[]>{
-        return this.gamesService.getGames(req.user.id);
+    async getGames(@Req() req: AuthenticatedRequest, @Res({passthrough: true}) res: FastifyReply, @Query() query: PaginationDto): Promise<GameEntity[]>{
+        const games: GameEntity[] = await this.gamesService.getGames(req.user.id, query.take, query.skip);
+        res.header("X-Total-Count", games.length);
+        res.header("X-Take", query.take.toString());
+        res.header("X-Skip", query.skip.toString());
+        return games;
     }
 
     /**
