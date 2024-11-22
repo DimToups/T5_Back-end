@@ -287,4 +287,21 @@ export class QuizService{
             skip: skip || 0,
         } as PaginationResponse<UserQuizEntity[]>;
     }
+
+    async deleteQuiz(quizId: string, user: UserEntity): Promise<void>{
+        const quiz: Quiz = await this.prismaService.quiz.findUnique({
+            where: {
+                id: quizId,
+            },
+        });
+        if(!quiz)
+            throw new NotFoundException("This quiz doesn't exist.");
+        if(quiz.user_id !== user.id)
+            throw new ForbiddenException("You must be the owner of the quiz to delete it.");
+        await this.prismaService.quiz.delete({
+            where: {
+                id: quizId,
+            },
+        });
+    }
 }
