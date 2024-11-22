@@ -259,7 +259,7 @@ export class GamesService{
     async createQuickGame(amount: number, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<GameEntity>{
         const questions: QuestionEntity[] = await this.questionsService.generateQuestions(amount, difficulty, category);
         let quiz: QuizEntity = await this.quizService.createQuiz("", "", difficulty, category, user);
-        quiz = await this.quizService.updateQuiz(quiz.id, `Quick game ${quiz.id}`, questions, user, "Quick game", difficulty, category);
+        quiz = await this.quizService.updateQuiz(quiz.id, `Quick game ${quiz.id}`, questions, user, "Auto-generated quiz for quick game", difficulty, category);
         await this.quizService.publishQuiz(quiz.id, user);
         return await this.startGame(quiz.id, user);
     }
