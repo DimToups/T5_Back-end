@@ -18,7 +18,7 @@ export class QuestionsService{
     ){}
 
     private generateQuestionSum(question: PartialQuestionEntity): string{
-        const infos: string[] = [question.question, question.difficulty || "", question.category || "", question.correctAnswer, ...question.incorrectAnswers];
+        const infos: string[] = [question.question, question?.userId || "", question.difficulty || "", question.category || "", question.correctAnswer, ...question.incorrectAnswers];
         infos.sort();
         return this.cipherService.getSum(infos.join(""));
     }
@@ -26,7 +26,7 @@ export class QuestionsService{
     async generateQuestions(amount: number, difficulty?: Difficulties, category?: Categories): Promise<QuestionEntity[]>{
         const categoryId: number = category ? Object.keys(Categories).indexOf(Categories[category]) + 9 : undefined; // Offset
         const questions: any[] = await this.fetchQuestions(amount, categoryId, difficulty);
-        const formattedQuestions: PartialQuestionEntity[] = questions.map((question) => {
+        const formattedQuestions: PartialQuestionEntity[] = questions.map((question: any): PartialQuestionEntity => {
             return {
                 question: he.decode(question.question),
                 difficulty: Difficulties[he.decode(question.difficulty).toUpperCase()],

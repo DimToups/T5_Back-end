@@ -1,6 +1,7 @@
 import {
     Body,
     Controller,
+    Delete,
     Get,
     HttpCode,
     HttpStatus,
@@ -137,5 +138,20 @@ export class QuizController{
         res.header("X-Skip", quizzes.skip.toString());
         res.header("access-control-expose-headers", "X-Total-Count, X-Take, X-Skip");
         return quizzes.data;
+    }
+
+    /**
+     * Delete a quiz (published or not) if user is its owner
+     *
+     * @throws {401} Unauthorized
+     * @throws {403} Forbidden
+     * @throws {404} Not Found
+     * @throws {500} Internal Server Error
+     */
+    @Delete(":quiz_id")
+    @UseGuards(AuthGuard)
+    @ApiBearerAuth()
+    async deleteQuiz(@Req() req: MaybeAuthenticatedRequest, @Param("quiz_id") quizId: string): Promise<void>{
+        return this.quizService.deleteQuiz(quizId, req.user);
     }
 }

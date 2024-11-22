@@ -92,12 +92,12 @@ model Quiz {
 model Games {
   id               String    @id
   quiz_id          String
-  quiz             Quiz      @relation(fields: [quiz_id], references: [id])
+  quiz             Quiz      @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
   current_question Int       @default(0)
   score            Int       @default(0)
   user_id          String?
   code             String    @unique
-  user             Users?    @relation(fields: [user_id], references: [id])
+  user             Users?    @relation(fields: [user_id], references: [id], onDelete: NoAction)
   created_at       DateTime  @default(now())
   updated_at       DateTime  @updatedAt
   ended_at         DateTime?
@@ -114,7 +114,7 @@ model Questions {
   correct_answer    String
   incorrect_answers String[]
   user_id           String?
-  user              Users?          @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  user              Users?          @relation(fields: [user_id], references: [id], onDelete: NoAction)
   quiz_questions    QuizQuestions[]
   answers           Answers[]
 
@@ -136,7 +136,7 @@ model Answers {
   game_id      String
   game         Games     @relation(fields: [game_id], references: [id], onDelete: Cascade)
   question_sum String
-  question     Questions @relation(fields: [question_sum], references: [sum])
+  question     Questions @relation(fields: [question_sum], references: [sum], onDelete: Cascade)
   correct      Boolean
   empty        Boolean
   created_at   DateTime  @default(now())
