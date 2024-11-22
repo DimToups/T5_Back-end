@@ -69,8 +69,8 @@ export class GamesController{
     async getGames(@Req() req: AuthenticatedRequest, @Res({passthrough: true}) res: FastifyReply, @Query() query: PaginationDto): Promise<GameEntity[]>{
         const games: PaginationResponse<GameEntity[]> = await this.gamesService.getGames(req.user.id, query.take, query.skip);
         res.header("X-Total-Count", games.total.toString());
-        res.header("X-Take", query.take.toString());
-        res.header("X-Skip", query.skip.toString());
+        res.header("X-Take", games.take.toString());
+        res.header("X-Skip", games.skip.toString());
         return games.data;
     }
 
