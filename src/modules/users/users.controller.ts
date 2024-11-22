@@ -55,7 +55,11 @@ export class UsersController{
      */
     @Post("login")
     async loginUser(@Body() loginUserDto: LoginUserDto): Promise<CreateUserResponse>{
-        const user: UserEntity = await this.usersService.getUserFromEmail(loginUserDto.email);
+        let user: UserEntity;
+        if(loginUserDto.usernameOrEmail.includes("@"))
+            user = await this.usersService.getUserFromEmail(loginUserDto.usernameOrEmail);
+        else
+            user = await this.usersService.getUserFromUsername(loginUserDto.usernameOrEmail);
         if(!user)
             throw new NotFoundException("User not found");
         const session: string = await this.authService.createSession(user.username, loginUserDto.password);
