@@ -254,7 +254,7 @@ export class QuizService{
         };
     }
 
-    async getQuizzes(user: UserEntity, take?: number, skip?: number): Promise<UserQuizEntity[]>{
+    async getQuizzes(user: UserEntity, take?: number, skip?: number): Promise<PaginationResponse<UserQuizEntity[]>>{
         const quizzes: any[] = await this.prismaService.quiz.findMany({
             where: {
                 user_id: user.id,
@@ -265,7 +265,7 @@ export class QuizService{
             take: take || 50,
             skip: skip || 0,
         });
-        return quizzes.map((quiz: any): UserQuizEntity => {
+        const data: UserQuizEntity[] = quizzes.map((quiz: any): UserQuizEntity => {
             return {
                 id: quiz.id,
                 title: quiz.title,
@@ -276,5 +276,15 @@ export class QuizService{
                 category: quiz.category || undefined,
             } as UserQuizEntity;
         });
+        return {
+            data,
+            total: await this.prismaService.quiz.count({
+                where: {
+                    user_id: user.id,
+                },
+            }),
+            take: take || 50,
+            skip: skip || 0,
+        } as PaginationResponse<UserQuizEntity[]>;
     }
 }
