@@ -58,7 +58,7 @@ model Users {
   sessions  Sessions[]
   quiz      Quiz[]
   games     Games[]
-  Questions Questions[]
+  questions Questions[]
 
   @@map("users")
 }
@@ -101,6 +101,7 @@ model Games {
   created_at       DateTime  @default(now())
   updated_at       DateTime  @updatedAt
   ended_at         DateTime?
+  answers          Answers[]
 
   @@map("games")
 }
@@ -115,6 +116,7 @@ model Questions {
   user_id           String?
   user              Users?          @relation(fields: [user_id], references: [id], onDelete: SetNull)
   quiz_questions    QuizQuestions[]
+  answers           Answers[]
 
   @@map("questions")
 }
@@ -128,4 +130,17 @@ model QuizQuestions {
 
   @@id([quiz_id, question_id])
   @@map("quiz_questions")
+}
+
+model Answers {
+  game_id      String
+  game         Games     @relation(fields: [game_id], references: [id], onDelete: Cascade)
+  question_sum String
+  question     Questions @relation(fields: [question_sum], references: [sum])
+  correct      Boolean
+  empty        Boolean
+  created_at   DateTime  @default(now())
+
+  @@id([game_id, question_sum])
+  @@map("answers")
 }

@@ -224,6 +224,14 @@ export class GamesService{
                 },
             },
         });
+        await this.prismaService.answers.create({
+            data: {
+                game_id: gameId,
+                question_sum: question.sum,
+                correct: isCorrect,
+                empty: !answer,
+            },
+        });
         let nextQuestion: PublicQuestionEntity | undefined;
         try{
             nextQuestion = await this.getCurrentQuestion(game.id, user);
