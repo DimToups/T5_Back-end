@@ -10,7 +10,7 @@ export class StatisticsController{
         private readonly statisticsService: StatisticsService,
     ){}
 
-    @Get("quiz_id")
+    @Get(":quiz_id")
     async getQuizStatistics(@Param("quiz_id") quizId: string): Promise<QuizStatisticEntity>{
         return this.statisticsService.getQuizStatistics(quizId);
     }
