@@ -115,6 +115,7 @@ export class UsersController{
     /**
      * Change the user password
      *
+     * @throws {400} Bad Request
      * @throws {401} Unauthorized
      * @throws {500} Internal Server Error
      */

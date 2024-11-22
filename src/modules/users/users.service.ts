@@ -1,4 +1,10 @@
-import {ConflictException, Injectable, NotFoundException, UnauthorizedException} from "@nestjs/common";
+import {
+    BadRequestException,
+    ConflictException,
+    Injectable,
+    NotFoundException,
+    UnauthorizedException,
+} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {CipherService} from "../../common/services/cipher.service";
 import {UserEntity} from "./models/entities/user.entity";
@@ -72,6 +78,8 @@ export class UsersService{
     }
 
     async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void>{
+        if(oldPassword === newPassword)
+            throw new BadRequestException("Old password and new password cannot be the same");
         const user: Users = await this.prismaService.users.findUnique({
             where: {
                 id: userId,
