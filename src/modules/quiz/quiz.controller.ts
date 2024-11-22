@@ -117,6 +117,7 @@ export class QuizController{
         res.header("X-Total-Count", quiz.total.toString());
         res.header("X-Take", quiz.take.toString());
         res.header("X-Skip", quiz.skip.toString());
+        res.header("access-control-expose-headers", "X-Total-Count, X-Take, X-Skip");
         return quiz.data;
     }
 
@@ -134,6 +135,7 @@ export class QuizController{
         res.header("X-Total-Count", quizzes.total.toString());
         res.header("X-Take", quizzes.take.toString());
         res.header("X-Skip", quizzes.skip.toString());
+        res.header("access-control-expose-headers", "X-Total-Count, X-Take, X-Skip");
         return quizzes.data;
     }
 }
