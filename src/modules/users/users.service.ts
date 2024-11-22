@@ -1,4 +1,4 @@
-import {ConflictException, Injectable, NotFoundException} from "@nestjs/common";
+import {ConflictException, Injectable, NotFoundException, UnauthorizedException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {CipherService} from "../../common/services/cipher.service";
 import {UserEntity} from "./models/entities/user.entity";
@@ -71,8 +71,18 @@ export class UsersService{
         });
     }
 
-    async changePassword(userId: string, password: string): Promise<void>{
-        const hashedPassword = await this.cipherService.hashPassword(password);
+    async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void>{
+        const user: Users = await this.prismaService.users.findUnique({
+            where: {
+                id: userId,
+            },
+        });
+        if(!user)
+            throw new NotFoundException("User not found");
+        const isValidPassword = await this.cipherService.comparePassword(user.password, oldPassword);
+        if(!isValidPassword)
+            throw new UnauthorizedException("Old password is incorrect");
+        const hashedPassword = await this.cipherService.hashPassword(newPassword);
         await this.prismaService.users.update({
             where: {
                 id: userId,

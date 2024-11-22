@@ -123,7 +123,7 @@ export class UsersController{
     @UseGuards(AuthGuard)
     @ApiBearerAuth()
     async changePassword(@Req() request: AuthenticatedRequest, @Body() body: ChangePasswordDto): Promise<void>{
-        await this.usersService.changePassword(request.user.id, body.password);
+        await this.usersService.changePassword(request.user.id, body.oldPassword, body.newPassword);
     }
 
     /**
