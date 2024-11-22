@@ -1,17 +1,19 @@
 import {PaginationDto} from "../../../../common/models/dto/pagination.dto";
 import {Categories, Difficulties} from "@prisma/client";
 import {ApiProperty} from "@nestjs/swagger";
-import {IsOptional, IsString} from "class-validator";
+import {IsEnum, IsOptional, IsString} from "class-validator";
 
 export class GetQuestionsDto extends PaginationDto{
+    @ApiProperty({enum: Difficulties, required: false})
     @IsString()
     @IsOptional()
-    @ApiProperty({enum: Difficulties, required: false})
+    @IsEnum(Difficulties)
     difficulty?: Difficulties;
 
+    @ApiProperty({enum: Categories, required: false})
     @IsString()
     @IsOptional()
-    @ApiProperty({enum: Categories, required: false})
+    @IsEnum(Categories)
     category?: Categories;
 
     @IsString()
