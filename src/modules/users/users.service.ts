@@ -44,6 +44,14 @@ export class UsersService{
         });
     }
 
+    async getUserFromUsername(username: string): Promise<UserEntity>{
+        return await this.prismaService.users.findFirst({
+            where: {
+                username,
+            },
+        });
+    }
+
     async getUserProfile(userId: string): Promise<UserProfileEntity>{
         const user: Users = await this.prismaService.users.findUnique({
             where: {
