@@ -125,7 +125,7 @@ export class GamesService{
         } as GameEntity;
     }
 
-    async getGames(userId: string): Promise<GameEntity[]>{
+    async getGames(userId: string, take?: number, skip?: number): Promise<GameEntity[]>{
         const games: any[] = await this.prismaService.games.findMany({
             where: {
                 user_id: userId,
@@ -137,6 +137,8 @@ export class GamesService{
                     },
                 },
             },
+            take: take || 50,
+            skip: skip || 0,
         });
         return games.map((game: any) => {
             return {
