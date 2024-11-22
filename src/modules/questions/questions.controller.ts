@@ -40,6 +40,7 @@ export class QuestionsController{
         res.header("X-Total-Count", questions.total.toString());
         res.header("X-Take", questions.take.toString());
         res.header("X-Skip", questions.skip.toString());
+        res.header("access-control-expose-headers", "X-Total-Count, X-Take, X-Skip");
         return questions.data;
     }
 }

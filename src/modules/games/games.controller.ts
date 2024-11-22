@@ -71,6 +71,7 @@ export class GamesController{
         res.header("X-Total-Count", games.total.toString());
         res.header("X-Take", games.take.toString());
         res.header("X-Skip", games.skip.toString());
+        res.header("access-control-expose-headers", "X-Total-Count, X-Take, X-Skip");
         return games.data;
     }
 
