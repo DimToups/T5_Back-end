@@ -8,7 +8,6 @@ import {PublicQuestionEntity} from "./models/entities/public-question.entity";
 import {SubmitAnswerResponse} from "./models/submit-answer.response";
 import {QuizService} from "../quiz/quiz.service";
 import {QuestionsService} from "../questions/questions.service";
-import {QuestionEntity} from "../questions/models/entities/question.entity";
 import {QuizEntity} from "../quiz/models/entity/quiz.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 
@@ -272,10 +271,7 @@ export class GamesService{
     }
 
     async createQuickGame(amount: number, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<GameEntity>{
-        const questions: QuestionEntity[] = await this.questionsService.generateQuestions(amount, difficulty, category);
-        let quiz: QuizEntity = await this.quizService.createQuiz("", "", difficulty, category, user);
-        quiz = await this.quizService.updateQuiz(quiz.id, `Quick game ${quiz.id}`, questions, user, "Auto-generated quiz for quick game", difficulty, category);
-        await this.quizService.publishQuiz(quiz.id, user);
+        let quiz: QuizEntity = await this.quizService.createQuickQuiz(amount, difficulty, category, user);
         return await this.startGame(quiz.id, user);
     }
 }

@@ -49,6 +49,25 @@ export class QuizService{
         });
     }
 
+    async createQuickQuiz(questionAmount: number, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<QuizEntity>{
+        const questions: QuestionEntity[] = await this.questionsService.generateQuestions(questionAmount, difficulty, category);
+        const quizId = this.cipherService.generateUuid(7);
+        const quiz: Quiz = await this.prismaService.quiz.create({
+            data: {
+                id: quizId,
+                title: `Quick game ${quizId}`,
+                description: "Auto-generated quiz for quick game",
+                difficulty,
+                category,
+                user_id: user?.id,
+                quick_game: true,
+            },
+        });
+        const finalQuiz: QuizEntity = await this.updateQuiz(quiz.id, quiz.title, questions, user, quiz.description, quiz.difficulty, quiz.category);
+        await this.publishQuiz(quiz.id, user);
+        return new QuizEntity(finalQuiz);
+    }
+
     async getQuizDataById(quizId: string, user?: UserEntity): Promise<QuizEntity>{
         const quiz: any = await this.prismaService.quiz.findUnique({
             where: {
@@ -258,6 +277,7 @@ export class QuizService{
         const quizzes: any[] = await this.prismaService.quiz.findMany({
             where: {
                 user_id: user.id,
+                quick_game: false,
             },
             include: {
                 quiz_questions: true,
@@ -281,6 +301,7 @@ export class QuizService{
             total: await this.prismaService.quiz.count({
                 where: {
                     user_id: user.id,
+                    quick_game: false,
                 },
             }),
             take: take || 50,
