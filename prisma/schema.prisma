@@ -81,7 +81,7 @@ model Quiz {
   published      Boolean         @default(false)
   quick_game     Boolean         @default(false)
   user_id        String?
-  user           Users?          @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  user           Users?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   games          Games[]
   quiz_questions QuizQuestions[]
   created_at     DateTime        @default(now())
@@ -98,7 +98,7 @@ model Games {
   score            Int       @default(0)
   user_id          String?
   code             String    @unique
-  user             Users?    @relation(fields: [user_id], references: [id], onDelete: NoAction)
+  user             Users?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
   created_at       DateTime  @default(now())
   updated_at       DateTime  @updatedAt
   ended_at         DateTime?
@@ -115,7 +115,7 @@ model Questions {
   correct_answer    String
   incorrect_answers String[]
   user_id           String?
-  user              Users?          @relation(fields: [user_id], references: [id], onDelete: NoAction)
+  user              Users?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   quiz_questions    QuizQuestions[]
   answers           Answers[]
 
