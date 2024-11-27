@@ -63,17 +63,9 @@ export class QuizService{
                 quick_game: true,
             },
         });
-        await this.updateQuiz(quiz.id, quiz.title, questions, user, quiz.description, quiz.difficulty, quiz.category);
+        const finalQuiz: QuizEntity = await this.updateQuiz(quiz.id, quiz.title, questions, user, quiz.description, quiz.difficulty, quiz.category);
         await this.publishQuiz(quiz.id, user);
-        return new QuizEntity({
-            id: quiz.id,
-            title: quiz.title,
-            description: quiz.description,
-            difficulty: quiz.difficulty,
-            category: quiz.category,
-            userId: quiz.user_id,
-            questions: [],
-        });
+        return new QuizEntity(finalQuiz);
     }
 
     async getQuizDataById(quizId: string, user?: UserEntity): Promise<QuizEntity>{
