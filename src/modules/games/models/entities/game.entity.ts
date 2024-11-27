@@ -1,6 +1,7 @@
 export class GameEntity{
     id: string;
     quizId: string;
+    quizTitle: string;
     userId?: string;
     questionCount: number;
     currentQuestion: number;
