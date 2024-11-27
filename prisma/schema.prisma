@@ -79,6 +79,7 @@ model Quiz {
   difficulty     Difficulties?
   category       Categories?
   published      Boolean         @default(false)
+  quick_game     Boolean         @default(false)
   user_id        String?
   user           Users?          @relation(fields: [user_id], references: [id], onDelete: SetNull)
   games          Games[]
