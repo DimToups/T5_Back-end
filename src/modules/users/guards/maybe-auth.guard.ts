@@ -1,4 +1,4 @@
-import {CanActivate, ExecutionContext, Injectable} from "@nestjs/common";
+import {CanActivate, ExecutionContext, Injectable, UnauthorizedException} from "@nestjs/common";
 import {PrismaService} from "../../../common/services/prisma.service";
 import {FastifyRequest} from "fastify";
 import {UserEntity} from "../models/entities/user.entity";
@@ -23,10 +23,10 @@ export class MaybeAuthGuard implements CanActivate{
             return true;
         const session: Sessions = await this.prismaService.sessions.findUnique({where: {id: sessionId}});
         if(!session)
-            return true;
+            throw new UnauthorizedException("Invalid session id, you must remove the session id from the request header");
         if(session.expire_at < new Date()){
             await this.prismaService.sessions.delete({where: {id: sessionId}});
-            return true;
+            throw new UnauthorizedException("Session expired, you must remove the session id from the request header");
         }
         request.user = new UserEntity(await this.prismaService.users.findUnique({where: {id: session.user_id}}));
         request.sessionId = sessionId;

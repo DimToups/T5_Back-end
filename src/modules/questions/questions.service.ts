@@ -1,4 +1,4 @@
-import {Injectable, InternalServerErrorException} from "@nestjs/common";
+import {BadRequestException, Injectable, InternalServerErrorException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {Categories, Difficulties, Questions} from "@prisma/client";
 import {QuestionEntity} from "./models/entities/question.entity";
@@ -26,6 +26,8 @@ export class QuestionsService{
     async generateQuestions(amount: number, difficulty?: Difficulties, category?: Categories): Promise<QuestionEntity[]>{
         const categoryId: number = category ? Object.keys(Categories).indexOf(Categories[category]) + 9 : undefined; // Offset
         const questions: any[] = await this.fetchQuestions(amount, categoryId, difficulty);
+        if(!questions || questions.length === 0)
+            throw new BadRequestException("No questions found for selected criteria");
         const formattedQuestions: PartialQuestionEntity[] = questions.map((question: any): PartialQuestionEntity => {
             return {
                 question: he.decode(question.question),
