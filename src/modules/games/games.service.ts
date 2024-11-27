@@ -47,6 +47,7 @@ export class GamesService{
         return {
             id: game.id,
             quizId: game.quiz_id,
+            quizTitle: game.quiz.title,
             userId: game.user_id,
             questionCount: game.quiz.quiz_questions.length,
             currentQuestion: game.current_question,
@@ -80,6 +81,7 @@ export class GamesService{
         return {
             id: game.id,
             quizId: game.quiz_id,
+            quizTitle: game.quiz.title,
             userId: game.user_id,
             questionCount: game.quiz.quiz_questions.length,
             currentQuestion: game.current_question,
@@ -115,6 +117,7 @@ export class GamesService{
         return {
             id: game.id,
             quizId: game.quiz_id,
+            quizTitle: quiz.title,
             userId: game.user_id,
             questionCount: quiz.quiz_questions.length,
             currentQuestion: game.current_question,
@@ -145,6 +148,7 @@ export class GamesService{
             return {
                 id: game.id,
                 quizId: game.quiz_id,
+                quizTitle: game.quiz.title,
                 userId: game.user_id,
                 questionCount: game.quiz.quiz_questions.length,
                 currentQuestion: game.current_question,
