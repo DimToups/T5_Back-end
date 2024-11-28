@@ -234,6 +234,7 @@ export class QuizService{
         const quizzes: any[] = await this.prismaService.quiz.findMany({
             where: {
                 published: true,
+                quick_game: false,
                 title: {
                     contains: search || "",
                 },
