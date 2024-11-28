@@ -58,8 +58,10 @@ export class QuizController{
      * @throws {500} Internal Server Error
      */
     @Get(":quiz_id")
-    async getQuizById(@Param("quiz_id") quizId: string): Promise<QuizEntity>{
-        return this.quizService.getQuizDataById(quizId);
+    @UseGuards(MaybeAuthGuard)
+    @ApiBearerAuth()
+    async getQuizById(@Req() req: MaybeAuthenticatedRequest, @Param("quiz_id") quizId: string): Promise<QuizEntity>{
+        return this.quizService.getQuizDataById(quizId, req.user);
     }
 
     /**

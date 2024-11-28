@@ -13,5 +13,6 @@ export class CreateUserDto extends ChangeUsernameDto{
 
     @IsNotEmpty()
     @IsString()
+    @Length(8, 255)
     password: string;
 }
