@@ -151,14 +151,17 @@ export class QuizService{
             },
         });
         const questions: QuestionEntity[] = await this.questionsService.addPartialQuestionsToDatabase(partialQuestions);
+        let quizQuestions: QuizQuestions[] = questions.filter((item, pos) => {
+            return questions.indexOf(item) == pos;
+        }).map((question: QuestionEntity): QuizQuestions => {
+            return {
+                quiz_id: quizId,
+                question_id: question.sum,
+                position: questions.findIndex((q: QuestionEntity): boolean => q.sum === question.sum),
+            } as QuizQuestions;
+        });
         await this.prismaService.quizQuestions.createMany({
-            data: questions.map((question: QuestionEntity): QuizQuestions => {
-                return {
-                    quiz_id: quizId,
-                    question_id: question.sum,
-                    position: questions.findIndex((q: QuestionEntity): boolean => q.sum === question.sum),
-                } as QuizQuestions;
-            }),
+            data: quizQuestions,
         });
         return new QuizEntity({
             id: quiz.id,
