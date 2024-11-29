@@ -2,6 +2,7 @@ import {PartialQuestionEntity} from "./partial-question.entity";
 
 export class QuestionEntity extends PartialQuestionEntity{
     sum: string;
+    userId?: string;
 
     constructor(partial: Partial<QuestionEntity>){
         super();

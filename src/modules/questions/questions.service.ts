@@ -17,8 +17,8 @@ export class QuestionsService{
         private readonly cipherService: CipherService,
     ){}
 
-    private generateQuestionSum(question: PartialQuestionEntity): string{
-        const infos: string[] = [question.question, question?.userId || "", question.difficulty || "", question.category || "", question.correctAnswer, ...question.incorrectAnswers];
+    private generateQuestionSum(question: PartialQuestionEntity, user?: UserEntity): string{
+        const infos: string[] = [question.question, user?.id || "", question.difficulty || "", question.category || "", question.correctAnswer, ...question.incorrectAnswers];
         infos.sort();
         return this.cipherService.getSum(infos.join(""));
     }
@@ -119,16 +119,16 @@ export class QuestionsService{
         };
     }
 
-    async addPartialQuestionsToDatabase(partialQuestions: PartialQuestionEntity[]): Promise<QuestionEntity[]>{
+    async addPartialQuestionsToDatabase(partialQuestions: PartialQuestionEntity[], user?: UserEntity): Promise<QuestionEntity[]>{
         const questions: QuestionEntity[] = partialQuestions.map((question: PartialQuestionEntity): QuestionEntity => {
             return new QuestionEntity({
-                sum: this.generateQuestionSum(question),
+                sum: this.generateQuestionSum(question, user),
                 question: question.question,
                 difficulty: question.difficulty,
                 category: question.category,
                 correctAnswer: question.correctAnswer,
                 incorrectAnswers: question.incorrectAnswers,
-                userId: question.userId,
+                userId: user?.id,
             });
         });
         await this.prismaService.questions.createMany({

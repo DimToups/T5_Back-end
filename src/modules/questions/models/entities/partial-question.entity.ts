@@ -11,5 +11,4 @@ export class PartialQuestionEntity{
 
     correctAnswer: string;
     incorrectAnswers: string[];
-    userId?: string;
 }
