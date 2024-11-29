@@ -150,10 +150,14 @@ export class QuizService{
                 quiz_id: quizId,
             },
         });
-        const questions: QuestionEntity[] = await this.questionsService.addPartialQuestionsToDatabase(partialQuestions);
-        let quizQuestions: QuizQuestions[] = questions.filter((item, pos) => {
-            return questions.indexOf(item) == pos;
-        }).map((question: QuestionEntity): QuizQuestions => {
+        const questions: QuestionEntity[] = await this.questionsService.addPartialQuestionsToDatabase(partialQuestions, user);
+        // Dedupe questions array
+        let filteredQuestions: QuestionEntity[] = questions.filter((value: QuestionEntity, index: number, self: QuestionEntity[]): boolean =>
+            index === self.findIndex((t: QuestionEntity) => (
+                t.sum === value.sum
+            )),
+        );
+        const quizQuestions: QuizQuestions[] = filteredQuestions.map((question: QuestionEntity): QuizQuestions => {
             return {
                 quiz_id: quizId,
                 question_id: question.sum,
