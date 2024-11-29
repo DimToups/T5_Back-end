@@ -262,6 +262,7 @@ export class QuizService{
             total: await this.prismaService.quiz.count({
                 where: {
                     published: true,
+                    quick_game: false,
                     title: {
                         contains: search || "",
                     },
