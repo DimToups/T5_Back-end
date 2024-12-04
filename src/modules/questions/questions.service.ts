@@ -1,80 +1,150 @@
-import {Injectable, NotFoundException} from "@nestjs/common";
-import {QuestionEntity} from "./models/entities/question.entity";
+import {BadRequestException, Injectable, InternalServerErrorException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
-import {SubmitAnswerResponse} from "./models/responses/submit-answer.response";
-import {QuizEntity} from "../quiz/models/entities/quiz.entity";
+import {Categories, Difficulties, Questions} from "@prisma/client";
+import {QuestionEntity} from "./models/entities/question.entity";
+import {CipherService} from "../../common/services/cipher.service";
+import * as he from "he";
+import {PartialQuestionEntity} from "./models/entities/partial-question.entity";
+import {UserEntity} from "../users/models/entities/user.entity";
+import {PaginationResponse} from "../../common/models/responses/pagination.response";
 
 @Injectable()
 export class QuestionsService{
+    private static readonly BASE_URL = "https://opentdb.com";
+
     constructor(
         private readonly prismaService: PrismaService,
+        private readonly cipherService: CipherService,
     ){}
 
-    async getCurrentQuestion(quizCode: string): Promise<QuestionEntity>{
-        const quiz = await this.prismaService.quiz.findUnique({
-            where: {
-                code: quizCode,
-            },
-            include: {
-                quiz_questions: {
-                    include: {
-                        question: true,
-                    }
-                }
-            }
-        });
-        const questions = quiz.quiz_questions.map((quizQuestion: any) => quizQuestion.question);
-        const question = questions[quiz.current_question];
-        if(!question)
-            return null;
-        if(question.incorrect_answers.length === 3)
-            return{
-                id: question.id,
-                question: question.question,
-                difficulty: question.difficulty,
-                category: question.category,
-                answers: question.incorrect_answers.concat(question.correct_answer).sort(() => Math.random() - 0.5),
-                position: quiz.current_question + 1,
-            };
-        else
-            return{
-                id: question.id,
-                question: question.question,
-                difficulty: question.difficulty,
-                category: question.category,
-                answers: question.incorrect_answers.concat(question.correct_answer),
-                position: quiz.current_question + 1,
-            };
+    private generateQuestionSum(question: PartialQuestionEntity, user?: UserEntity): string{
+        const infos: string[] = [question.question, user?.id || "", question.difficulty || "", question.category || "", question.correctAnswer, ...question.incorrectAnswers];
+        infos.sort();
+        return this.cipherService.getSum(infos.join(""));
     }
 
-    async submitAnswer(quiz: QuizEntity, answer: string): Promise<SubmitAnswerResponse>{
-        const currentQuestion = await this.getCurrentQuestion(quiz.code);
-        if(!currentQuestion)
-            throw new NotFoundException("Question not found");
-        const question = await this.prismaService.questions.findUnique({
-            where: {
-                id: currentQuestion.id,
-            }
+    async generateQuestions(amount: number, difficulty?: Difficulties, category?: Categories): Promise<QuestionEntity[]>{
+        const categoryId: number = category ? Object.keys(Categories).indexOf(Categories[category]) + 9 : undefined; // Offset
+        const questions: any[] = await this.fetchQuestions(amount, categoryId, difficulty);
+        if(!questions || questions.length === 0)
+            throw new BadRequestException("No questions found for selected criteria");
+        const formattedQuestions: PartialQuestionEntity[] = questions.map((question: any): PartialQuestionEntity => {
+            return {
+                question: he.decode(question.question),
+                difficulty: Difficulties[he.decode(question.difficulty).toUpperCase()],
+                category: Categories[he.decode(question.category).toUpperCase().replaceAll(" ", "_").replaceAll(":", "").replaceAll("&", "AND")],
+                correctAnswer: he.decode(question.correct_answer),
+                incorrectAnswers: question.incorrect_answers.map((answer: string) => he.decode(answer)),
+            };
         });
-        const isCorrect = question.correct_answer.toLowerCase() === answer?.toLowerCase();
-        const finalQuiz = await this.prismaService.quiz.update({
+        return formattedQuestions.map((question) => {
+            return new QuestionEntity({
+                sum: this.generateQuestionSum(question),
+                question: question.question,
+                difficulty: question.difficulty,
+                category: question.category,
+                correctAnswer: question.correctAnswer,
+                incorrectAnswers: question.incorrectAnswers,
+            });
+        });
+    }
+
+    private async fetchQuestions(questionCount: number, categoryId?: number, difficulty?: string): Promise<any[]>{
+        let categoryOption: string = "";
+        if(categoryId)
+            categoryOption = `&category=${categoryId}`;
+        let difficultyOption: string = "";
+        if(difficulty){
+            difficultyOption = `&difficulty=${difficulty.toLowerCase()}`;
+        }
+        try{
+            const res: Response = await fetch(`${QuestionsService.BASE_URL}/api.php?amount=${questionCount}${categoryOption}${difficultyOption}`);
+            const data: any = await res.json();
+            return data.results;
+        }catch(e){
+            throw new InternalServerErrorException(e);
+        }
+    }
+
+    async getQuestions(
+        user?: UserEntity,
+        search?: string,
+        difficulty?: Difficulties,
+        category?: Categories,
+        take?: number,
+        skip?: number,
+    ): Promise<PaginationResponse<QuestionEntity[]>>{
+        const questions: Questions[] = await this.prismaService.questions.findMany({
             where: {
-                code: quiz.code,
-            },
-            data: {
-                current_question: {
-                    increment: 1,
+                OR: [
+                    {user_id: null},
+                    user ? {user_id: user.id} : undefined,
+                ].filter(Boolean),
+                question: {
+                    contains: search || "",
                 },
-                score: {
-                    increment: isCorrect ? 1 : 0,
-                }
-            }
+                difficulty: difficulty || undefined,
+                category: category || undefined,
+            },
+            take: take || 50,
+            skip: skip || 0,
         });
         return {
-            isCorrect,
-            correctAnswer: question.correct_answer,
-            score: finalQuiz.score,
-            nextQuestion: await this.getCurrentQuestion(quiz.code),
+            data: questions.map((question: Questions): QuestionEntity => {
+                return new QuestionEntity({
+                    sum: question.sum,
+                    question: question.question,
+                    difficulty: question.difficulty,
+                    category: question.category,
+                    correctAnswer: question.correct_answer,
+                    incorrectAnswers: question.incorrect_answers,
+                    userId: question.user_id,
+                });
+            }),
+            total: await this.prismaService.questions.count({
+                where: {
+                    OR: [
+                        {user_id: null},
+                        user ? {user_id: user.id} : undefined,
+                    ].filter(Boolean),
+                    question: {
+                        contains: search || "",
+                    },
+                    difficulty: difficulty || undefined,
+                    category: category || undefined,
+                },
+            }),
+            take: take || 50,
+            skip: skip || 0,
         };
+    }
+
+    async addPartialQuestionsToDatabase(partialQuestions: PartialQuestionEntity[], user?: UserEntity): Promise<QuestionEntity[]>{
+        const questions: QuestionEntity[] = partialQuestions.map((question: PartialQuestionEntity): QuestionEntity => {
+            return new QuestionEntity({
+                sum: this.generateQuestionSum(question, user),
+                question: question.question,
+                difficulty: question.difficulty,
+                category: question.category,
+                correctAnswer: question.correctAnswer,
+                incorrectAnswers: question.incorrectAnswers,
+                userId: user?.id,
+            });
+        });
+        await this.prismaService.questions.createMany({
+            data: questions.map((question: QuestionEntity): Questions => {
+                return {
+                    sum: question.sum,
+                    question: question.question,
+                    difficulty: question.difficulty,
+                    category: question.category,
+                    correct_answer: question.correctAnswer,
+                    incorrect_answers: question.incorrectAnswers,
+                    user_id: question.userId,
+                };
+            }),
+            skipDuplicates: true,
+        });
+        return questions;
     }
 }

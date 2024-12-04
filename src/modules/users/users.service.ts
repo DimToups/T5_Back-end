@@ -1,0 +1,121 @@
+import {
+    BadRequestException,
+    ConflictException,
+    Injectable,
+    NotFoundException,
+    UnauthorizedException,
+} from "@nestjs/common";
+import {PrismaService} from "../../common/services/prisma.service";
+import {CipherService} from "../../common/services/cipher.service";
+import {UserEntity} from "./models/entities/user.entity";
+import {UserProfileEntity} from "./models/entities/user-profile.entity";
+import {Users} from "@prisma/client";
+
+@Injectable()
+export class UsersService{
+    constructor(
+        private readonly prismaService: PrismaService,
+        private readonly cipherService: CipherService,
+    ){}
+
+    async createUser(username: string, email: string, password: string): Promise<UserEntity>{
+        // Check if username or email already exists
+        let user: Users = await this.prismaService.users.findFirst({
+            where: {
+                OR: [
+                    {username},
+                    {email},
+                ],
+            },
+        });
+        if(user)
+            throw new ConflictException("Username or email already exists");
+        const hashedPassword = await this.cipherService.hashPassword(password);
+        user = await this.prismaService.users.create({
+            data: {
+                id: this.cipherService.generateUuid(7),
+                username,
+                email,
+                password: hashedPassword,
+            },
+        });
+        return new UserEntity(user);
+    }
+
+    async getUserFromEmail(email: string): Promise<UserEntity>{
+        return await this.prismaService.users.findFirst({
+            where: {
+                email,
+            },
+        });
+    }
+
+    async getUserFromUsername(username: string): Promise<UserEntity>{
+        return await this.prismaService.users.findFirst({
+            where: {
+                username,
+            },
+        });
+    }
+
+    async getUserProfile(userId: string): Promise<UserProfileEntity>{
+        const user: Users = await this.prismaService.users.findUnique({
+            where: {
+                id: userId,
+            },
+        });
+        if(!user)
+            throw new NotFoundException("User not found");
+        return new UserProfileEntity(user);
+    }
+
+    async deleteUser(userId: string): Promise<void>{
+        await this.prismaService.users.delete({
+            where: {
+                id: userId,
+            },
+        });
+    }
+
+    async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void>{
+        if(oldPassword === newPassword)
+            throw new BadRequestException("Old password and new password cannot be the same");
+        const user: Users = await this.prismaService.users.findUnique({
+            where: {
+                id: userId,
+            },
+        });
+        if(!user)
+            throw new NotFoundException("User not found");
+        const isValidPassword = await this.cipherService.comparePassword(user.password, oldPassword);
+        if(!isValidPassword)
+            throw new UnauthorizedException("Old password is incorrect");
+        const hashedPassword = await this.cipherService.hashPassword(newPassword);
+        await this.prismaService.users.update({
+            where: {
+                id: userId,
+            },
+            data: {
+                password: hashedPassword,
+            },
+        });
+    }
+
+    async changeUsername(userId: string, username: string): Promise<void>{
+        const user: Users = await this.prismaService.users.findFirst({
+            where: {
+                username,
+            },
+        });
+        if(user)
+            throw new ConflictException("Username already exists");
+        await this.prismaService.users.update({
+            where: {
+                id: userId,
+            },
+            data: {
+                username,
+            },
+        });
+    }
+}

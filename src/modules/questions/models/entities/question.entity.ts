@@ -1,16 +1,11 @@
-import {ApiProperty} from "@nestjs/swagger";
+import {PartialQuestionEntity} from "./partial-question.entity";
 
-export class QuestionEntity{
-    @ApiProperty()
-        id: string;
-    @ApiProperty()
-        question: string;
-    @ApiProperty()
-        difficulty: number;
-    @ApiProperty()
-        category: number;
-    @ApiProperty()
-        answers: string[];
-    @ApiProperty()
-        position: number;
+export class QuestionEntity extends PartialQuestionEntity{
+    sum: string;
+    userId?: string;
+
+    constructor(partial: Partial<QuestionEntity>){
+        super();
+        Object.assign(this, partial);
+    }
 }

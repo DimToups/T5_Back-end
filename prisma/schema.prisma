@@ -13,35 +13,135 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Questions {
-  id                String          @id
-  question          String
-  difficulty        Int
-  category          Int
-  correct_answer    String
-  incorrect_answers String[]
-  quiz_questions    QuizQuestions[]
+enum Difficulties {
+  EASY
+  MEDIUM
+  HARD
 
-  @@map("questions")
+  @@map("difficulties")
+}
+
+enum Categories {
+  GENERAL_KNOWLEDGE
+  ENTERTAINMENT_BOOKS
+  ENTERTAINMENT_FILM
+  ENTERTAINMENT_MUSIC
+  ENTERTAINMENT_MUSICALS_AND_THEATRES
+  ENTERTAINMENT_TELEVISION
+  ENTERTAINMENT_VIDEO_GAMES
+  ENTERTAINMENT_BOARD_GAMES
+  SCIENCE_AND_NATURE
+  SCIENCE_COMPUTERS
+  SCIENCE_MATHEMATICS
+  MYTHOLOGY
+  SPORTS
+  GEOGRAPHY
+  HISTORY
+  POLITICS
+  ART
+  CELEBRITIES
+  ANIMALS
+  VEHICLES
+  ENTERTAINMENT_COMICS
+  SCIENCE_GADGETS
+  ENTERTAINMENT_JAPANESE_ANIME_AND_MANGA
+  ENTERTAINMENT_CARTOON_AND_ANIMATIONS
+
+  @@map("categories")
+}
+
+model Users {
+  id        String      @id
+  username  String      @unique
+  email     String      @unique
+  password  String
+  sessions  Sessions[]
+  quiz      Quiz[]
+  games     Games[]
+  questions Questions[]
+
+  @@map("users")
+}
+
+model Sessions {
+  id        String   @id
+  user_id   String
+  user      Users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  expire_at DateTime
+
+  @@map("sessions")
 }
 
 model Quiz {
-  code             String          @id
-  current_question Int             @default(0)
-  difficulty       Int?
-  category         Int?
-  score            Int             @default(0)
-  quiz_questions   QuizQuestions[]
+  id             String          @id
+  title          String
+  description    String?
+  difficulty     Difficulties?
+  category       Categories?
+  published      Boolean         @default(false)
+  quick_game     Boolean         @default(false)
+  user_id        String?
+  user           Users?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  games          Games[]
+  quiz_questions QuizQuestions[]
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
 
   @@map("quiz")
 }
 
-model QuizQuestions {
-  quiz_code   String
-  quiz        Quiz      @relation(fields: [quiz_code], references: [code])
-  question_id String
-  question    Questions @relation(fields: [question_id], references: [id])
+model Games {
+  id               String    @id
+  quiz_id          String
+  quiz             Quiz      @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  current_question Int       @default(0)
+  score            Int       @default(0)
+  user_id          String?
+  code             String    @unique
+  user             Users?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  ended_at         DateTime?
+  answers          Answers[]
 
-  @@id([quiz_code, question_id])
+  @@map("games")
+}
+
+model Questions {
+  sum               String          @id
+  question          String
+  difficulty        Difficulties?
+  category          Categories?
+  correct_answer    String
+  incorrect_answers String[]
+  user_id           String?
+  user              Users?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  quiz_questions    QuizQuestions[]
+  answers           Answers[]
+
+  @@map("questions")
+}
+
+model QuizQuestions {
+  quiz_id     String
+  quiz        Quiz      @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  question_id String
+  question    Questions @relation(fields: [question_id], references: [sum], onDelete: Cascade)
+  position    Int
+
+  @@id([quiz_id, question_id])
   @@map("quiz_questions")
+}
+
+model Answers {
+  game_id      String
+  game         Games     @relation(fields: [game_id], references: [id], onDelete: Cascade)
+  question_sum String
+  question     Questions @relation(fields: [question_sum], references: [sum], onDelete: Cascade)
+  correct      Boolean
+  empty        Boolean
+  created_at   DateTime  @default(now())
+
+  @@id([game_id, question_sum])
+  @@map("answers")
 }
