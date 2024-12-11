@@ -140,8 +140,8 @@ model Questions {
   user_id            String?
   user               Users?              @relation(fields: [user_id], references: [id], onDelete: Cascade)
   quiz_questions     QuizQuestions[]
-  answerType         AnswerType
-  statistics_answers StatisticsAnswers[] // TODO: for TOM to be removed @deprected
+  answer_type        AnswerType
+  statistics_answers StatisticsAnswers[]
 
   @@map("questions")
 }
@@ -179,7 +179,7 @@ model StatisticsAnswers {
   created_at   DateTime  @default(now())
 
   @@id([game_id, question_sum])
-  @@map("answers")
+  @@map("statistics_answers")
 }
 
 model Rooms {
