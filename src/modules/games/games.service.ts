@@ -206,7 +206,6 @@ export class GamesService{
             return {
                 id: answer.id,
                 questionSum: answer.question_sum,
-                correct: answer.correct,
                 type: answer.type,
                 answerContent: answer.answer_content,
             };

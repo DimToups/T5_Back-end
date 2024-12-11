@@ -1,6 +1,6 @@
 import {ApiProperty} from "@nestjs/swagger";
 import {Categories, Difficulties} from "@prisma/client";
-import {AnswerEntity} from "../../../questions/models/entities/answer.entity";
+import {PublicAnswerEntity} from "./public-answer.entity";
 
 export class PublicQuestionEntity{
     sum: string;
@@ -11,6 +11,6 @@ export class PublicQuestionEntity{
     @ApiProperty({enum: Categories, required: false})
     category?: Categories;
 
-    answers: AnswerEntity[];
+    answers: PublicAnswerEntity[];
     position: number;
 }
