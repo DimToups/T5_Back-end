@@ -17,6 +17,7 @@ import {UserEntity} from "../users/models/entities/user.entity";
 import {PublicQuizEntity} from "./models/entity/public-quiz.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 import {UserQuizEntity} from "./models/entity/user-quiz.entity";
+import {AnswerEntity} from "../questions/models/entities/answer.entity";
 
 @Injectable()
 export class QuizService{
@@ -103,8 +104,13 @@ export class QuizService{
                     question: question.question,
                     difficulty: question.difficulty,
                     category: question.category,
-                    correctAnswer: question.correct_answer,
-                    incorrectAnswers: question.incorrect_answers,
+                    answers: question.answers.map(answer => new AnswerEntity({
+                        id: answer.id,
+                        questionSum: answer.question_sum,
+                        correct: answer.correct,
+                        type: answer.type,
+                        answerContent: answer.answer_content,
+                    })),
                     userId: question.user_id,
                 } as QuestionEntity;
             }),

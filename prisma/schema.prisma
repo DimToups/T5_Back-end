@@ -140,7 +140,6 @@ model Questions {
   user_id            String?
   user               Users?              @relation(fields: [user_id], references: [id], onDelete: Cascade)
   quiz_questions     QuizQuestions[]
-  answer_type        AnswerType
   statistics_answers StatisticsAnswers[]
 
   @@map("questions")

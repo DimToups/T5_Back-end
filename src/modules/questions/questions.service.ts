@@ -1,12 +1,13 @@
 import {BadRequestException, Injectable, InternalServerErrorException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
-import {Categories, Difficulties, Questions} from "@prisma/client";
+import {Answers, AnswerType, Categories, Difficulties, Questions} from "@prisma/client";
 import {QuestionEntity} from "./models/entities/question.entity";
 import {CipherService} from "../../common/services/cipher.service";
 import * as he from "he";
 import {PartialQuestionEntity} from "./models/entities/partial-question.entity";
 import {UserEntity} from "../users/models/entities/user.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
+import {AnswerEntity} from "./models/entities/answer.entity";
 
 @Injectable()
 export class QuestionsService{
@@ -18,38 +19,63 @@ export class QuestionsService{
     ){}
 
     private generateQuestionSum(question: PartialQuestionEntity, user?: UserEntity): string{
-        const infos: string[] = [question.question, user?.id || "", question.difficulty || "", question.category || "", question.correctAnswer, ...question.incorrectAnswers];
+        const infos: string[] = [question.question, user?.id || "", question.difficulty || "", question.category || "", ...question.answers.map((answer: AnswerEntity) => answer.answerContent)];
         infos.sort();
         return this.cipherService.getSum(infos.join(""));
     }
 
     async generateQuestions(amount: number, difficulty?: Difficulties, category?: Categories): Promise<QuestionEntity[]>{
         const categoryId: number = category ? Object.keys(Categories).indexOf(Categories[category]) + 9 : undefined; // Offset
-        const questions: any[] = await this.fetchQuestions(amount, categoryId, difficulty);
+        const questions = await this.fetchQuestions(amount, categoryId, difficulty);
         if(!questions || questions.length === 0)
             throw new BadRequestException("No questions found for selected criteria");
         const formattedQuestions: PartialQuestionEntity[] = questions.map((question: any): PartialQuestionEntity => {
-            return {
+            const answers: AnswerEntity[] = question.incorrect_answers.map((answer: string): AnswerEntity => {
+                return new AnswerEntity({
+                    id: this.cipherService.generateUuid(7),
+                    correct: false,
+                    type: AnswerType.TEXT,
+                    answerContent: he.decode(answer),
+                });
+            });
+            answers.push(new AnswerEntity({
+                id: this.cipherService.generateUuid(7),
+                correct: true,
+                type: AnswerType.TEXT,
+                answerContent: he.decode(question.correct_answer),
+            }));
+            const returnQuestion = {
                 question: he.decode(question.question),
                 difficulty: Difficulties[he.decode(question.difficulty).toUpperCase()],
                 category: Categories[he.decode(question.category).toUpperCase().replaceAll(" ", "_").replaceAll(":", "").replaceAll("&", "AND")],
-                correctAnswer: he.decode(question.correct_answer),
-                incorrectAnswers: question.incorrect_answers.map((answer: string) => he.decode(answer)),
+                answers: answers,
             };
+            returnQuestion.answers.forEach((value) => {
+                value.questionSum = this.generateQuestionSum(returnQuestion);
+            });
+            return returnQuestion;
         });
         return formattedQuestions.map((question) => {
+            const answers: AnswerEntity[] = question.answers.map((answer: AnswerEntity): AnswerEntity => {
+                return new AnswerEntity({
+                    id: answer.id,
+                    questionSum: answer.questionSum,
+                    correct: answer.correct,
+                    type: answer.type,
+                    answerContent: answer.answerContent,
+                });
+            });
             return new QuestionEntity({
                 sum: this.generateQuestionSum(question),
                 question: question.question,
                 difficulty: question.difficulty,
                 category: question.category,
-                correctAnswer: question.correctAnswer,
-                incorrectAnswers: question.incorrectAnswers,
+                answers: answers,
             });
         });
     }
 
-    private async fetchQuestions(questionCount: number, categoryId?: number, difficulty?: string): Promise<any[]>{
+    private async fetchQuestions(questionCount: number, categoryId?: number, difficulty?: string){
         let categoryOption: string = "";
         if(categoryId)
             categoryOption = `&category=${categoryId}`;
@@ -74,7 +100,7 @@ export class QuestionsService{
         take?: number,
         skip?: number,
     ): Promise<PaginationResponse<QuestionEntity[]>>{
-        const questions: Questions[] = await this.prismaService.questions.findMany({
+        const questions = await this.prismaService.questions.findMany({
             where: {
                 OR: [
                     {user_id: null},
@@ -88,16 +114,24 @@ export class QuestionsService{
             },
             take: take || 50,
             skip: skip || 0,
+            include: {
+                answers: true,
+            },
         });
         return {
-            data: questions.map((question: Questions): QuestionEntity => {
+            data: questions.map((question): QuestionEntity => {
                 return new QuestionEntity({
                     sum: question.sum,
                     question: question.question,
                     difficulty: question.difficulty,
                     category: question.category,
-                    correctAnswer: question.correct_answer,
-                    incorrectAnswers: question.incorrect_answers,
+                    answers: question.answers.map(answer => new AnswerEntity({
+                        id: answer.id,
+                        questionSum: answer.question_sum,
+                        correct: answer.correct,
+                        type: answer.type,
+                        answerContent: answer.answer_content,
+                    })),
                     userId: question.user_id,
                 });
             }),
@@ -126,8 +160,7 @@ export class QuestionsService{
                 question: question.question,
                 difficulty: question.difficulty,
                 category: question.category,
-                correctAnswer: question.correctAnswer,
-                incorrectAnswers: question.incorrectAnswers,
+                answers: question.answers,
                 userId: user?.id,
             });
         });
@@ -138,13 +171,37 @@ export class QuestionsService{
                     question: question.question,
                     difficulty: question.difficulty,
                     category: question.category,
-                    correct_answer: question.correctAnswer,
-                    incorrect_answers: question.incorrectAnswers,
                     user_id: question.userId,
                 };
             }),
             skipDuplicates: true,
         });
+
+        await this.prismaService.answers.deleteMany({
+            where: {
+                question_sum: {
+                    in: questions.map(question => question.sum),
+                },
+            },
+        });
+
+        const data: Answers[] = [];
+        for(const question of questions){
+            data.push(...question.answers.map(answer => ({
+                question_sum: question.sum,
+                correct: answer.correct,
+                type: answer.type,
+                answer_content: answer.answerContent,
+                id: answer.id,
+                created_at: new Date(),
+            })));
+        }
+
+
+        await this.prismaService.answers.createMany({
+            data: data,
+        });
+
         return questions;
     }
 }
