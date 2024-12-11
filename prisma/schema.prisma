@@ -13,6 +13,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AnswerType {
+  TEXT
+  IMAGE
+  SOUND
+
+  @@map("answer_type")
+}
+
 enum Difficulties {
   EASY
   MEDIUM
@@ -105,37 +113,49 @@ model Quiz {
 }
 
 model Games {
-  id               String    @id
-  mode             GameModes @default(SINGLEPLAYER)
+  id               String              @id
+  mode             GameModes           @default(SINGLEPLAYER)
   quiz_id          String
-  quiz             Quiz      @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
-  current_question Int       @default(0)
-  score            Int       @default(0)
+  quiz             Quiz                @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  current_question Int                 @default(0)
+  score            Int                 @default(0)
   user_id          String?
-  code             String    @unique
-  user             Users?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  code             String              @unique
+  user             Users?              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  created_at       DateTime            @default(now())
+  updated_at       DateTime            @updatedAt
   ended_at         DateTime?
-  answers          Answers[]
+  answers          StatisticsAnswers[]
   room             Rooms?
 
   @@map("games")
 }
 
 model Questions {
-  sum               String          @id
-  question          String
-  difficulty        Difficulties?
-  category          Categories?
-  correct_answer    String
-  incorrect_answers String[]
-  user_id           String?
-  user              Users?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  quiz_questions    QuizQuestions[]
-  answers           Answers[]
+  sum                String              @id
+  question           String
+  difficulty         Difficulties?
+  category           Categories?
+  answers            Answers[]
+  user_id            String?
+  user               Users?              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  quiz_questions     QuizQuestions[]
+  answerType         AnswerType
+  statistics_answers StatisticsAnswers[] // TODO: for TOM to be removed @deprected
 
   @@map("questions")
+}
+
+model Answers {
+  id             String     @id
+  question_sum   String
+  question       Questions  @relation(fields: [question_sum], references: [sum], onDelete: Cascade)
+  correct        Boolean
+  type           AnswerType
+  answer_content String // text or {image, image} path
+  created_at     DateTime   @default(now())
+
+  @@map("answers")
 }
 
 model QuizQuestions {
@@ -149,7 +169,7 @@ model QuizQuestions {
   @@map("quiz_questions")
 }
 
-model Answers {
+model StatisticsAnswers {
   game_id      String
   game         Games     @relation(fields: [game_id], references: [id], onDelete: Cascade)
   question_sum String
