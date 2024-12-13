@@ -185,6 +185,7 @@ model Rooms {
   game_id      String        @id
   game         Games         @relation(fields: [game_id], references: [id], onDelete: Cascade)
   started_at   DateTime?
+  max_players  Int?
   room_players RoomPlayers[]
   teams        Teams[]
 

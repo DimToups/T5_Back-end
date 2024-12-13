@@ -9,5 +9,6 @@ import {QuestionsModule} from "../questions/questions.module";
     controllers: [GamesController],
     providers: [GamesService],
     imports: [ServicesModule, QuizModule, QuestionsModule],
+    exports: [GamesService],
 })
 export class GamesModule{}

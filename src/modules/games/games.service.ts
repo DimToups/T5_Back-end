@@ -1,7 +1,7 @@
 import {ForbiddenException, Injectable, NotFoundException, UnauthorizedException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {UserEntity} from "../users/models/entities/user.entity";
-import {Categories, Difficulties, Games} from "@prisma/client";
+import {Categories, Difficulties, GameModes, Games} from "@prisma/client";
 import {CipherService} from "../../common/services/cipher.service";
 import {GameEntity} from "./models/entities/game.entity";
 import {PublicQuestionEntity} from "./models/entities/public-question.entity";
@@ -92,7 +92,7 @@ export class GamesService{
         } as GameEntity;
     }
 
-    async startGame(quizId: string, user?: UserEntity): Promise<GameEntity>{
+    async startGame(quizId: string, user?: UserEntity, gameMode: GameModes = GameModes.SINGLEPLAYER): Promise<GameEntity>{
         const quiz: any = await this.prismaService.quiz.findUnique({
             where: {
                 id: quizId,
@@ -111,10 +111,12 @@ export class GamesService{
                 quiz_id: quizId,
                 user_id: user?.id,
                 code: this.generateQuizCode(),
+                mode: gameMode,
             },
         });
         return {
             id: game.id,
+            mode: game.mode,
             quizId: game.quiz_id,
             quizTitle: quiz.title,
             userId: game.user_id,
