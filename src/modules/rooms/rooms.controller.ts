@@ -13,6 +13,15 @@ export class RoomsController{
         private readonly roomsService: RoomsService,
     ){}
 
+    /**
+     * Create a room
+     *
+     * Player name is only required for anonymous users
+     *
+     * @throws {400} Bad Request
+     * @throws {401} Unauthorized
+     * @throws {500} Internal Server Error
+     */
     @Post("create")
     @UseGuards(MaybeAuthGuard)
     async createRoom(@Req() req: MaybeAuthenticatedRequest, @Body() body: CreateRoomDto){
