@@ -18,6 +18,7 @@ import {PublicQuizEntity} from "./models/entity/public-quiz.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 import {UserQuizEntity} from "./models/entity/user-quiz.entity";
 import {AnswerEntity} from "../questions/models/entities/answer.entity";
+import {UpdateQuestionDto} from "./models/dto/update-question.dto";
 
 @Injectable()
 export class QuizService{
@@ -115,6 +116,122 @@ export class QuizService{
                 } as QuestionEntity;
             }),
         });
+    }
+
+    async updateQuestion(quizId: string, questionId: string, user: UserEntity, updateQuestion: UpdateQuestionDto): Promise<QuestionEntity>{
+        const quiz = await this.prismaService.quiz.findUnique({
+            where: {
+                id: quizId,
+            },
+            include: {
+                quiz_questions: {
+                    include: {
+                        question: {
+                            include: {
+                                answers: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if(!quiz){
+            throw new NotFoundException("This quiz doesn't exist.");
+        }
+        if(!user && quiz.user_id){
+            throw new UnauthorizedException("You're not allowed to access this quiz.");
+        }
+        if(user && quiz.user_id !== user.id){
+            throw new ForbiddenException("You're not allowed to access this quiz.");
+        }
+
+        const question = quiz.quiz_questions.find(question => question.question_id === questionId).question;
+        if(!question){
+            throw new NotFoundException("This question doesn't exist.");
+        }
+
+        const questionEntity = new QuestionEntity({
+            sum: question.sum,
+            question: question.question,
+            difficulty: question.difficulty,
+            category: question.category,
+            answers: question.answers.map(answer => new AnswerEntity({
+                id: answer.id,
+                questionSum: answer.question_sum,
+                correct: answer.correct,
+                type: answer.type,
+                answerContent: answer.answer_content,
+            })),
+            userId: question.user_id,
+        });
+        if(this.isEqual(updateQuestion, questionEntity)){
+            return questionEntity;
+        }
+
+        // handle file upload
+
+        const updatedQuestion = await this.prismaService.questions.update({
+            where: {
+                sum: question.sum,
+            },
+            data: {
+                question: updateQuestion.question,
+                difficulty: updateQuestion.difficulty,
+                category: updateQuestion.category,
+                answers: {
+                    create: updateQuestion.answers.map(answer => ({
+                        type: answer.type,
+                        correct: answer.correct,
+                        answer_content: answer.answerContent,
+                        question_sum: question.sum,
+                        id: this.cipherService.generateUuid(7),
+                    })),
+                    deleteMany: {
+                        question_sum: {
+                            in: question.answers.map(answer => answer.question_sum),
+                        },
+                    },
+                },
+            },
+            include: {
+                answers: true,
+            },
+        });
+        return new QuestionEntity({
+            sum: updatedQuestion.sum,
+            question: updatedQuestion.question,
+            difficulty: updatedQuestion.difficulty,
+            category: updatedQuestion.category,
+            answers: updatedQuestion.answers.map(answer => new AnswerEntity({
+                id: answer.id,
+                questionSum: answer.question_sum,
+                correct: answer.correct,
+                type: answer.type,
+                answerContent: answer.answer_content,
+            })),
+            userId: updatedQuestion.user_id,
+        });
+    }
+
+    isEqual(questionDto: UpdateQuestionDto, question: QuestionEntity): boolean{
+        if(question.question !== questionDto.question
+          || question.difficulty !== questionDto.difficulty
+          || question.category !== questionDto.category
+          || question.answers.length !== questionDto.answers.length){
+            return false;
+        }
+        for(let i = 0; i < question.answers.length; i++){
+            let answer = question.answers[i];
+            let answerDto = questionDto.answers[i];
+            if(answer.type !== answerDto.type
+              || answer.correct !== answerDto.correct
+              || answer.answerContent !== answerDto.answerContent){
+                return false;
+            }
+        }
+
+        return true;
     }
 
     async updateQuiz(

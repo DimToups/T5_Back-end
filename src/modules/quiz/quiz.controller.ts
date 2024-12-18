@@ -27,6 +27,8 @@ import {GetPublicQuizDto} from "./models/dto/get-public-quiz.dto";
 import {AuthGuard} from "../users/guards/auth.guard";
 import {UserQuizEntity} from "./models/entity/user-quiz.entity";
 import {PaginationDto} from "../../common/models/dto/pagination.dto";
+import {UpdateQuestionDto} from "./models/dto/update-question.dto";
+import {QuestionEntity} from "../questions/models/entities/question.entity";
 
 @Controller("quiz")
 @ApiTags("Quiz")
@@ -78,6 +80,26 @@ export class QuizController{
     @ApiBearerAuth()
     async updateQuiz(@Req() req: MaybeAuthenticatedRequest, @Param("quiz_id") quizId: string, @Body() body: UpdateQuizDto): Promise<QuizEntity>{
         return this.quizService.updateQuiz(quizId, body.title, body.questions, req.user, body.description, body.difficulty, body.category);
+    }
+
+    /**
+     * Update a question
+     *
+     * @throws {403} Forbidden
+     * @throws {404} Not Found
+     * @throws {409} Conflict
+     * @throws {500} Internal Server Error
+     */
+    @Put(":quiz_id/questions/:question_id")
+    @UseGuards(MaybeAuthGuard)
+    @ApiBearerAuth()
+    async updateQuestion(
+        @Req() req: MaybeAuthenticatedRequest,
+        @Param("quiz_id") quizId: string,
+        @Param("question_id") questionId: string,
+        @Body() body: UpdateQuestionDto,
+    ): Promise<QuestionEntity>{
+        return this.quizService.updateQuestion(quizId, questionId, req.user, body);
     }
 
     /**
