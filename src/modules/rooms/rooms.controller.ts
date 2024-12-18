@@ -5,6 +5,7 @@ import {MaybeAuthGuard} from "../users/guards/maybe-auth.guard";
 import {CreateRoomDto} from "./models/dto/create-room.dto";
 import {GameModes} from "@prisma/client";
 import {MaybeAuthenticatedRequest} from "../users/models/models/maybe-authenticated-request";
+import {CreateRoomResponse} from "./models/responses/create-room.response";
 
 @Controller("rooms")
 @ApiTags("Rooms")
@@ -15,7 +16,7 @@ export class RoomsController{
 
     @Post("create")
     @UseGuards(MaybeAuthGuard)
-    async createRoom(@Req() req: MaybeAuthenticatedRequest, @Body() body: CreateRoomDto){
+    async createRoom(@Req() req: MaybeAuthenticatedRequest, @Body() body: CreateRoomDto): Promise<CreateRoomResponse>{
         if(!body.playerName && !req.user)
             throw new BadRequestException("Player name required for anonymous users");
         if(body.gameMode !== GameModes.MULTIPLAYER
