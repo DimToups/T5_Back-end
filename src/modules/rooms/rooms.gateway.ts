@@ -1,6 +1,8 @@
 import {OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway, WebSocketServer} from "@nestjs/websockets";
 import {Logger} from "@nestjs/common";
 import {Server} from "socket.io";
+import {AuthenticatedSocketEntity} from "./models/entities/authenticated-socket.entity";
+import {WsRoomAuthGuard} from "./guards/ws-room.guard";
 
 @WebSocketGateway({
     namespace: "rooms",
@@ -13,29 +15,36 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect{
     @WebSocketServer() server: Server;
     private readonly roomClients: Map<string, any[]> = new Map<string, any[]>();
 
-    async handleConnection(client: any){
+    constructor(
+        private readonly wsRoomAuthGuardService: WsRoomAuthGuard,
+    ){}
+
+    async handleConnection(client: AuthenticatedSocketEntity): Promise<void>{
         try{
-            // TODO
-            // await this.authGuardService.authenticate(client.handshake);
-            if(!this.roomClients.has(client.handshake.roomCode))
-                this.roomClients.set(client.handshake.roomCode, [client]);
+            await this.wsRoomAuthGuardService.authenticate(client);
+            if(!this.roomClients.has(client.room.gameId))
+                this.roomClients.set(client.room.gameId, [client]);
             else
-                this.roomClients.get(client.handshake.roomCode).push(client);
-            this.logger.log(`Client ${client.handshake.playerName} connected to room ${client.handshake.roomCode}`);
+                this.roomClients.get(client.room.gameId).push(client);
+            this.logger.log(`Client ${client.player.id} connected to room ${client.room.gameId}`);
         }catch(_: any){
             client.disconnect();
             return;
         }
     }
 
-    async handleDisconnect(client: any){
-        if(this.roomClients.has(client.handshake.roomCode)){
-            const index: number = this.roomClients.get(client.handshake.roomCode).indexOf(client);
+    async handleDisconnect(client: AuthenticatedSocketEntity){
+        if(!client.room?.gameId){
+            this.logger.log("Unknown client disconnected");
+            return;
+        }
+        if(this.roomClients.has(client.room.gameId)){
+            const index: number = this.roomClients.get(client.room.gameId).indexOf(client);
             if(index !== -1)
-                this.roomClients.get(client.handshake.roomCode).splice(index, 1);
-            if(this.roomClients.get(client.handshake.roomCode).length === 0)
-                this.roomClients.delete(client.handshake.roomCode);
-            this.logger.log(`Client ${client.handshake.playerName} disconnected from room ${client.handshake.roomCode}`);
+                this.roomClients.get(client.room.gameId).splice(index, 1);
+            if(this.roomClients.get(client.room.gameId).length === 0)
+                this.roomClients.delete(client.room.gameId);
+            this.logger.log(`Client ${client.player.id} disconnected from room ${client.room.gameId}`);
         }
     }
 }

@@ -10,7 +10,7 @@ import {ConfigService} from "@nestjs/config";
 import {CreateRoomResponse} from "./models/responses/create-room.response";
 import {RoomEntity} from "./models/entities/room.entity";
 import {RoomPlayerEntity} from "./models/entities/room-player.entity";
-import {Teams} from "@prisma/client";
+import {RoomPlayers, Teams} from "@prisma/client";
 import {TeamEntity} from "./models/entities/team.entity";
 
 @Injectable()
@@ -37,7 +37,7 @@ export class RoomsService{
                 max_players: createRoomDto.maxPlayers,
             },
         });
-        const roomPlayer = await this.prismaService.roomPlayers.create({
+        const roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.create({
             data: {
                 id: this.cipherService.generateUuid(7),
                 room_id: room.game_id,
@@ -97,7 +97,7 @@ export class RoomsService{
                 room_id: room.game_id,
             },
         });
-        const roomPlayer = await this.prismaService.roomPlayers.create({
+        const roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.create({
             data: {
                 id: this.cipherService.generateUuid(7),
                 room_id: room.game_id,
