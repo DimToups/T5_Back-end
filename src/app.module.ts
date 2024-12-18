@@ -13,6 +13,7 @@ import {QuestionsModule} from "./modules/questions/questions.module";
 import {QuizModule} from "./modules/quiz/quiz.module";
 import {GamesModule} from "./modules/games/games.module";
 import {StatisticsModule} from "./modules/statistics/statistics.module";
+import {RoomsModule} from "./modules/rooms/rooms.module";
 import {FileModule} from "./modules/file/file.module";
 
 dotenv.config();
@@ -34,6 +35,7 @@ dotenv.config();
         QuizModule,
         GamesModule,
         StatisticsModule,
+        RoomsModule,
         FileModule,
     ],
     providers: [
