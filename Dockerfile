@@ -6,7 +6,7 @@ COPY package*.json pnpm-lock.yaml ./
 COPY tsconfig.json ./
 COPY prisma ./prisma/
 
-RUN apk add --nocache ffmpeg && npm install -g pnpm && pnpm install --frozen-lockfile
+RUN apk add --no-cache ffmpeg && npm install -g pnpm && pnpm install --frozen-lockfile
 
 COPY . .
 
