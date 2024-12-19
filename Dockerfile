@@ -2,7 +2,7 @@ FROM node:22-alpine AS base
 WORKDIR /usr/src/app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN mkdir -p /usr/src/app \
+RUN mkdir -p /usr/src/app/public_answers \
     && chown -R node:node /usr/src/app \
     && corepack enable \
     && apk add --no-cache openssl ffmpeg \
