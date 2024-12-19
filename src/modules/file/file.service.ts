@@ -7,6 +7,7 @@ import * as sharp from "sharp";
 import * as fs from "node:fs";
 import {Readable} from "node:stream";
 import * as ffmpeg from "fluent-ffmpeg";
+import {join} from "node:path";
 
 @Injectable()
 export class FileService{
@@ -64,7 +65,7 @@ export class FileService{
         if(!answer){
             throw new Error("Answer not found");
         }
-        const path = "public_answers/" + sum + "." + extension;
+        const path = join(__dirname, "public_answers", sum + "." + extension);
         if(answer.answer_content === path){
             return path;
         }
