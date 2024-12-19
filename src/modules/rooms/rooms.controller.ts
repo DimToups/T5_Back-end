@@ -1,4 +1,4 @@
-import {BadRequestException, Body, Controller, Post, Req, UseGuards} from "@nestjs/common";
+import {BadRequestException, Body, Controller, Param, Post, Req, UseGuards} from "@nestjs/common";
 import {ApiTags} from "@nestjs/swagger";
 import {RoomsService} from "./rooms.service";
 import {MaybeAuthGuard} from "../users/guards/maybe-auth.guard";
@@ -6,6 +6,7 @@ import {CreateRoomDto} from "./models/dto/create-room.dto";
 import {GameModes} from "@prisma/client";
 import {MaybeAuthenticatedRequest} from "../users/models/models/maybe-authenticated-request";
 import {CreateRoomResponse} from "./models/responses/create-room.response";
+import {JoinRoomDto} from "./models/dto/join-room.dto";
 
 @Controller("rooms")
 @ApiTags("Rooms")
@@ -27,5 +28,11 @@ export class RoomsController{
         if(body.gameMode === GameModes.MULTIPLAYER)
             return this.roomsService.createScrumRoom(body);
         return this.roomsService.createTeamRoom(body);
+    }
+
+    @Post(":room_id/join")
+    @UseGuards(MaybeAuthGuard)
+    async joinRoom(@Req() req: MaybeAuthenticatedRequest, @Body() body: JoinRoomDto, @Param("room_id") roomId: string): Promise<CreateRoomResponse>{
+        return this.roomsService.joinRoom(roomId, body, req.user);
     }
 }

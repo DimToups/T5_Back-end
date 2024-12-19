@@ -10,8 +10,10 @@ import {ConfigService} from "@nestjs/config";
 import {CreateRoomResponse} from "./models/responses/create-room.response";
 import {RoomEntity} from "./models/entities/room.entity";
 import {RoomPlayerEntity} from "./models/entities/room-player.entity";
-import {RoomPlayers, Teams} from "@prisma/client";
+import {RoomPlayers, Rooms, Teams} from "@prisma/client";
 import {TeamEntity} from "./models/entities/team.entity";
+import {JoinRoomDto} from "./models/dto/join-room.dto";
+import {RoomsGateway} from "./rooms.gateway";
 
 @Injectable()
 export class RoomsService{
@@ -21,6 +23,7 @@ export class RoomsService{
         private readonly cipherService: CipherService,
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
+        private readonly roomsGatewayService: RoomsGateway,
     ){}
 
     async createScrumRoom(createRoomDto: CreateRoomDto, user?: UserEntity): Promise<CreateRoomResponse>{
@@ -66,8 +69,9 @@ export class RoomsService{
                     : null,
             } as RoomPlayerEntity],
             room: {
-                gameId: room.game_id,
+                id: room.game_id,
                 maxPlayers: room.max_players,
+                startedAt: room.started_at,
             } as RoomEntity,
         } as CreateRoomResponse;
     }
@@ -126,8 +130,9 @@ export class RoomsService{
                     : null,
             } as RoomPlayerEntity],
             room: {
-                gameId: room.game_id,
+                id: room.game_id,
                 maxPlayers: room.max_players,
+                startedAt: room.started_at,
             } as RoomEntity,
             teams: teams.map((team: Teams): TeamEntity => ({
                 id: team.id,
@@ -135,5 +140,82 @@ export class RoomsService{
                 roomId: team.room_id,
             })),
         } as CreateRoomResponse;
+    }
+
+    async joinRoom(roomId: string, body: JoinRoomDto, user?: UserEntity){
+        const room: Rooms = await this.prismaService.rooms.findUnique({
+            where: {
+                game_id: roomId,
+            },
+        });
+        if(!room)
+            throw new BadRequestException("Room does not exist");
+        if(room.started_at)
+            throw new BadRequestException("Room has already started");
+        const roomPlayers = await this.prismaService.roomPlayers.findMany({
+            where: {
+                room_id: roomId,
+            },
+            include: {
+                user: true,
+            },
+        });
+        if(roomPlayers.length >= room.max_players)
+            throw new BadRequestException("Room is full");
+        const jwt: string = this.jwtService.generateJWT({
+            playerId: this.cipherService.generateUuid(7),
+            roomId: roomId,
+        }, "1d", this.configService.get<string>("JWT_SECRET"));
+        const roomPlayer = await this.prismaService.roomPlayers.create({
+            data: {
+                id: this.cipherService.generateUuid(7),
+                room_id: roomId,
+                user_id: user ? user.id : null,
+                username: body.playerName,
+                owner: false,
+            },
+            include: {
+                user: true,
+            },
+        });
+        roomPlayers.push(roomPlayer);
+        const roomTeams: Teams[] = await this.prismaService.teams.findMany({
+            where: {
+                room_id: roomId,
+            },
+        });
+        const response = {
+            token: jwt,
+            players: roomPlayers.map((player): RoomPlayerEntity => ({
+                id: player.id,
+                username: player.username,
+                owner: player.owner,
+                roomId: player.room_id,
+                user: player.user
+                    ? {
+                        id: player.user.id,
+                        username: player.user.username,
+                        email: player.user.email,
+                    } as UserEntity
+                    : null,
+                teamId: player.team_id,
+            })),
+            room: {
+                id: room.game_id,
+                maxPlayers: room.max_players,
+                startedAt: room.started_at,
+            } as RoomEntity,
+            teams: roomTeams.map((team: Teams): TeamEntity => ({
+                roomId: team.room_id,
+                name: team.name,
+                id: team.id,
+            })),
+        } as CreateRoomResponse;
+        this.roomsGatewayService.onRoomUpdate(roomId, {
+            room: response.room,
+            players: response.players,
+            teams: response.teams,
+        });
+        return response;
     }
 }

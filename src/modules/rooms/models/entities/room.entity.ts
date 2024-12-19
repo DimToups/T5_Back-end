@@ -1,5 +1,5 @@
 export class RoomEntity{
-    gameId: string;
+    id: string;
     startedAt?: Date;
     maxPlayers: number;
 }

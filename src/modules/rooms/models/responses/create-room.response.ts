@@ -1,10 +1,5 @@
-import {RoomEntity} from "../entities/room.entity";
-import {RoomPlayerEntity} from "../entities/room-player.entity";
-import {TeamEntity} from "../entities/team.entity";
+import {CompleteRoomEntity} from "../entities/complete-room.entity";
 
-export class CreateRoomResponse{
+export class CreateRoomResponse extends CompleteRoomEntity{
     token: string;
-    room: RoomEntity;
-    players: RoomPlayerEntity[];
-    teams?: TeamEntity[];
 }
