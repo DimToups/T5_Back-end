@@ -44,7 +44,7 @@ async function loadServer(server: NestFastifyApplication){
     server.use(new LoggerMiddleware().use);
     await server.register(fastifyMultipart as any);
     await server.register(fastifyStatic as any, {
-        root: join(__dirname, "..", "..", "public_answers"),
+        root: join(__dirname, "public_answers"),
         prefix: "/public_answers/",
     });
     await server.register(fastifyHelmet as any, {
