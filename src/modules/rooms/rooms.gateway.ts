@@ -3,6 +3,7 @@ import {Logger} from "@nestjs/common";
 import {Server} from "socket.io";
 import {AuthenticatedSocketEntity} from "./models/entities/authenticated-socket.entity";
 import {WsRoomAuthGuard} from "./guards/ws-room.guard";
+import {CompleteRoomEntity} from "./models/entities/complete-room.entity";
 
 @WebSocketGateway({
     namespace: "rooms",
@@ -46,5 +47,10 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect{
                 this.roomClients.delete(client.room.gameId);
             this.logger.log(`Client ${client.player.id} disconnected from room ${client.room.gameId}`);
         }
+    }
+
+    onRoomUpdate(roomId: string, data: CompleteRoomEntity): void{
+        if(this.roomClients.has(roomId))
+            this.roomClients.get(roomId).forEach((client: AuthenticatedSocketEntity) => client.emit("onRoomUpdate", data));
     }
 }
