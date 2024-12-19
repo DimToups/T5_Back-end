@@ -8,28 +8,6 @@ import * as fs from "node:fs";
 import {Readable} from "node:stream";
 import * as ffmpeg from "fluent-ffmpeg";
 
-const imageExtensions = new Set([
-    "jpg",
-    "png",
-    "gif",
-    "webp",
-    "flif",
-    "cr2",
-    "tif",
-    "bmp",
-    "jxr",
-    "psd",
-    "ico",
-    "bpg",
-    "jp2",
-    "jpm",
-    "jpx",
-    "heic",
-    "cur",
-    "dcm",
-    "avif",
-]);
-
 @Injectable()
 export class FileService{
     constructor(
@@ -65,12 +43,15 @@ export class FileService{
         if(!question.user_id || user.id !== question.user_id)
             throw new ForbiddenException("You're not allowed to upload a file for this answer.");
 
-        if(imageExtensions.has(file.mimetype.toLowerCase())){
+        if(file.mimetype.split("/")[0] == "image"){
             const image = await this.convertImage(await this.resizeImage(file.buffer, 1024, 1024));
             return this.saveFile(answerId, image, "webp");
         }
-        const audio = await this.convertAudio(file.buffer);
-        return this.saveFile(answerId, audio, "opus");
+        if(file.mimetype.split("/")[0] == "audio"){
+            const audio = await this.convertAudio(file.buffer);
+            return this.saveFile(answerId, audio, "opus");
+        }
+        throw new BadRequestException("File type not supported");
     }
 
     private async saveFile(answerId: string, file: Buffer, extension: string): Promise<string>{
