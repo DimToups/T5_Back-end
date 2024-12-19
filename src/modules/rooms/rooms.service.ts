@@ -160,7 +160,7 @@ export class RoomsService{
                 user: true,
             },
         });
-        if(roomPlayers.length >= room.max_players)
+        if(room.max_players && roomPlayers.length >= room.max_players)
             throw new BadRequestException("Room is full");
         const jwt: string = this.jwtService.generateJWT({
             playerId: this.cipherService.generateUuid(7),
