@@ -13,6 +13,7 @@ import {FastifyListenOptions} from "fastify/types/instance";
 import fastifyMultipart from "@fastify/multipart";
 import {join} from "path";
 import fastifyStatic from "@fastify/static";
+import metadata from "./metadata";
 
 dotenv.config();
 
@@ -61,6 +62,7 @@ async function loadServer(server: NestFastifyApplication){
         .setVersion(process.env.npm_package_version)
         .addBearerAuth()
         .build();
+    await SwaggerModule.loadPluginMetadata(metadata);
     const document = SwaggerModule.createDocument(server, config);
     const theme = new SwaggerTheme();
     const customCss = theme.getBuffer(SwaggerThemeNameEnum.DARK);
