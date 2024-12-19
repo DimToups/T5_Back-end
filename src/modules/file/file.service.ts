@@ -65,7 +65,7 @@ export class FileService{
         if(!question.user_id || user.id !== question.user_id)
             throw new ForbiddenException("You're not allowed to upload a file for this answer.");
 
-        if(imageExtensions.has(file.mimetype)){
+        if(imageExtensions.has(file.mimetype.toLowerCase())){
             const image = await this.convertImage(await this.resizeImage(file.buffer, 1024, 1024));
             return this.saveFile(answerId, image, "webp");
         }
