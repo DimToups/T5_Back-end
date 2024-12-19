@@ -49,7 +49,7 @@ export class WsRoomAuthGuard implements CanActivate{
             throw new WsException("Player not found");
         socket.room = {
             maxPlayers: room.max_players,
-            gameId: room.game_id,
+            id: room.game_id,
             startedAt: room.started_at,
         } as RoomEntity;
         socket.player = {
