@@ -2,11 +2,11 @@ FROM node:22-alpine AS base
 WORKDIR /usr/src/app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN mkdir -p /usr/src/app &&  \
-    chown -R node:node /usr/src/app &&  \
-    corepack enable &&  \
-    apk add --no-cache openssl && \
-    pnpm -v
+RUN mkdir -p /usr/src/app \
+    && chown -R node:node /usr/src/app \
+    && corepack enable \
+    && apk add --no-cache openssl ffmpeg \
+    && pnpm -v
 USER node
 COPY package.json /usr/src/app/package.json
 COPY pnpm-lock.yaml /usr/src/app/pnpm-lock.yaml

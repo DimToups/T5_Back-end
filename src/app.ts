@@ -61,6 +61,7 @@ async function loadServer(server: NestFastifyApplication){
         .setVersion(process.env.npm_package_version)
         .addBearerAuth()
         .build();
+
     const document = SwaggerModule.createDocument(server, config);
     const theme = new SwaggerTheme();
     const customCss = theme.getBuffer(SwaggerThemeNameEnum.DARK);
