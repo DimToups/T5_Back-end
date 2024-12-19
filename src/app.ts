@@ -11,7 +11,6 @@ import * as process from "process";
 import * as dotenv from "dotenv";
 import {FastifyListenOptions} from "fastify/types/instance";
 import fastifyMultipart from "@fastify/multipart";
-import {join} from "path";
 import fastifyStatic from "@fastify/static";
 
 dotenv.config();
@@ -44,7 +43,7 @@ async function loadServer(server: NestFastifyApplication){
     server.use(new LoggerMiddleware().use);
     await server.register(fastifyMultipart as any);
     await server.register(fastifyStatic as any, {
-        root: join(__dirname, "public_answers"),
+        root: "public_answers",
         prefix: "/public_answers/",
     });
     await server.register(fastifyHelmet as any, {
