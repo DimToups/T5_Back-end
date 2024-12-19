@@ -49,10 +49,22 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect{
         }
     }
 
-    onRoomUpdate(roomId: string, data: CompleteRoomEntity): void{
+    private onEvent(roomId, eventName: string, data: any){
         if(this.roomClients.has(roomId)){
-            this.roomClients.get(roomId).forEach((client: AuthenticatedSocketEntity) => client.emit("onRoomUpdate", data));
-            this.logger.log(`Event onRoomUpdate emitted for ${roomId}`);
+            this.roomClients.get(roomId).forEach((client: AuthenticatedSocketEntity) => client.emit(eventName, data));
+            this.logger.log(`Event ${eventName} emitted for ${roomId}`);
         }
+    }
+
+    onRoomUpdate(roomId: string, data: CompleteRoomEntity): void{
+        this.onEvent(roomId, "onRoomUpdate", data);
+    }
+
+    onRoomStart(roomId: string, data: any){
+        this.onEvent(roomId, "onRoomStart", data);
+    }
+
+    onQuestionStart(roomId: string, data: any){
+        this.onEvent(roomId, "onQuestionStart", data);
     }
 }
