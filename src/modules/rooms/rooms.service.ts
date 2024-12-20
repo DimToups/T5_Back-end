@@ -17,10 +17,12 @@ import {RoomsGateway} from "./rooms.gateway";
 import {CompleteRoomEntity} from "./models/entities/complete-room.entity";
 import {PublicQuestionEntity} from "../games/models/entities/public-question.entity";
 import {QuestionResponse} from "./models/responses/question.response";
+import {SubmitAnswerDto} from "../games/models/dto/submit-answer.dto";
 
 @Injectable()
 export class RoomsService{
     private readonly startedRooms: Promise<void>[] = [];
+    private readonly playerAnswers: Map<string, string[][]> = new Map<string, string[][]>();
 
     constructor(
         private readonly prismaService: PrismaService,
@@ -66,6 +68,7 @@ export class RoomsService{
                     } as UserEntity
                     : null,
                 teamId: player.team_id,
+                score: player.score,
             })),
             room: {
                 id: room.game_id,
@@ -77,6 +80,7 @@ export class RoomsService{
                 roomId: team.room_id,
                 name: team.name,
                 id: team.id,
+                score: roomPlayers.filter(player => player.team_id === team.id).reduce((acc, player) => acc + player.score, 0) / roomPlayers.filter(player => player.team_id === team.id).length,
             })),
         } as CreateRoomResponse;
     }
@@ -275,9 +279,11 @@ export class RoomsService{
                 question,
                 endAt: new Date(Date.now() + questionDuration),
             } as QuestionResponse);
+            const correctAnswer = await this.gamesService.getCorrectAnswer(question.sum);
             await this.sleep(questionDuration);
             this.roomsGatewayService.onQuestionEnd(roomData.room.id, {
-                // TODO: Add question end data
+                ...await this.getRoomData(roomData.room.id),
+                correctAnswer,
                 endAt: new Date(Date.now() + 5000), // 5s
             });
             await this.sleep(5000); // 5s
@@ -350,5 +356,83 @@ export class RoomsService{
             },
         });
         this.roomsGatewayService.onRoomUpdate(roomId, await this.getRoomData(roomId));
+    }
+
+    async answerQuestion(roomId: string, playerId: string, submitAnswerDto: SubmitAnswerDto): Promise<void>{
+        const room = await this.prismaService.rooms.findFirst({
+            where: {
+                game_id: roomId,
+            },
+            include: {
+                game: true,
+            },
+        });
+        if(!room)
+            throw new NotFoundException("Room not found");
+        if(!room.started_at)
+            throw new BadRequestException("Room has not started yet");
+        const roomPlayers = await this.prismaService.roomPlayers.findMany({
+            where: {
+                room_id: roomId,
+            },
+        });
+        if(!roomPlayers.find(player => player.id === playerId))
+            throw new NotFoundException("Room player not found");
+        const questionCount: number = await this.gamesService.getQuestionCount(roomId);
+        const currentQuestion = await this.gamesService.getCurrentQuestion(roomId);
+        // Check if player has already answered and store its answer state to memory
+        if(!this.playerAnswers.has(roomId))
+            this.playerAnswers.set(roomId, Array.from({length: questionCount}));
+        let currentQuestionAnswers = this.playerAnswers.get(roomId)[currentQuestion.position];
+        if(!currentQuestionAnswers)
+            currentQuestionAnswers = [playerId];
+        else if(currentQuestionAnswers.includes(playerId))
+            throw new BadRequestException("Player has already answered");
+        else
+            currentQuestionAnswers.push(playerId);
+        this.playerAnswers.get(roomId)[currentQuestion.position] = currentQuestionAnswers;
+        // Check answer and calculate score
+        const isAnswerCorrect = await this.gamesService.isAnswerCorrect(currentQuestion.sum, submitAnswerDto.answer);
+        const correctAnswer = await this.gamesService.getCorrectAnswer(currentQuestion.sum);
+        if(isAnswerCorrect)
+            await this.prismaService.roomPlayers.update({
+                where: {
+                    id: playerId,
+                },
+                data: {
+                    score: {
+                        increment: 1,
+                    },
+                },
+            });
+        // Trigger specific logic for scrum mode
+        const isAllPlayersAnswered = this.playerAnswers.get(roomId)[currentQuestion.position].length === roomPlayers.length;
+        if(room.game.mode === GameModes.MULTIPLAYER)
+            this.answerScrumQuestion(roomId, isAnswerCorrect, isAllPlayersAnswered, correctAnswer);
+        // Trigger update for clients
+        this.roomsGatewayService.onPlayerAnswer(roomId, this.playerAnswers.get(roomId)[currentQuestion.position]);
+    }
+
+    private async answerScrumQuestion(roomId: string, isAnswerCorrect: boolean, isAllPlayersAnswered: boolean, correctAnswer: string): Promise<void>{
+        if(!isAnswerCorrect && !isAllPlayersAnswered)
+            return;
+        this.roomsGatewayService.onQuestionEnd(roomId, {
+            ...await this.getRoomData(roomId),
+            correctAnswer,
+            endAt: new Date(Date.now() + 5000), // 5s
+        });
+        await this.sleep(5000); // 5s
+        // Don't trigger next question if there is no more questions
+        const questionCount: number = await this.gamesService.getQuestionCount(roomId);
+        const currentQuestion = await this.gamesService.getCurrentQuestion(roomId);
+        if(currentQuestion.position === questionCount - 1){
+            this.roomsGatewayService.onRoomEnd(roomId, await this.getRoomData(roomId));
+            return;
+        }
+        await this.gamesService.nextQuestion(roomId);
+        const question: PublicQuestionEntity = await this.gamesService.getCurrentQuestion(roomId);
+        this.roomsGatewayService.onQuestionStart(roomId, {
+            question,
+        } as QuestionResponse);
     }
 }
