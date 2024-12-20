@@ -75,6 +75,15 @@ export class RoomsController{
         return this.roomsService.startRoom(req.room.id, req.player.id);
     }
 
+    /**
+     * Join a team (for team mode only)
+     *
+     * @throws {400} Bad Request
+     * @throws {401} Unauthorized
+     * @throws {403} Forbidden
+     * @throws {404} Not Found
+     * @throws {500} Internal Server Error
+     */
     @Post("team/:team_id/join")
     @UseGuards(RoomAuthGuard)
     @ApiBearerAuth()
