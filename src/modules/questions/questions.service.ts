@@ -1,6 +1,6 @@
 import {BadRequestException, Injectable, InternalServerErrorException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
-import {Answers, AnswerType, Categories, Difficulties, Questions} from "@prisma/client";
+import {Answers, AnswerType, Categories, Difficulties, PrismaClient, Questions} from "@prisma/client";
 import {QuestionEntity} from "./models/entities/question.entity";
 import {CipherService} from "../../common/services/cipher.service";
 import * as he from "he";
@@ -153,7 +153,8 @@ export class QuestionsService{
         };
     }
 
-    async addPartialQuestionsToDatabase(partialQuestions: PartialQuestionEntity[], user?: UserEntity): Promise<QuestionEntity[]>{
+    async addPartialQuestionsToDatabase(partialQuestions: PartialQuestionEntity[], user?: UserEntity, tx?: Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">): Promise<QuestionEntity[]>{
+        const prisma = tx || this.prismaService;
         const questions: QuestionEntity[] = partialQuestions.map((question: PartialQuestionEntity): QuestionEntity => {
             return new QuestionEntity({
                 sum: this.generateQuestionSum(question, user),
@@ -164,7 +165,7 @@ export class QuestionsService{
                 userId: user?.id,
             });
         });
-        await this.prismaService.questions.createMany({
+        await prisma.questions.createMany({
             data: questions.map((question: QuestionEntity): Questions => {
                 return {
                     sum: question.sum,
@@ -177,7 +178,7 @@ export class QuestionsService{
             skipDuplicates: true,
         });
 
-        await this.prismaService.answers.deleteMany({
+        await prisma.answers.deleteMany({
             where: {
                 question_sum: {
                     in: questions.map(question => question.sum),
@@ -191,14 +192,13 @@ export class QuestionsService{
                 question_sum: question.sum,
                 correct: answer.correct,
                 type: answer.type,
+                id: this.cipherService.generateUuid(7),
                 answer_content: answer.answerContent,
-                id: answer.id,
                 created_at: new Date(),
             })));
         }
 
-
-        await this.prismaService.answers.createMany({
+        await prisma.answers.createMany({
             data: data,
         });
 

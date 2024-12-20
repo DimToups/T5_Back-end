@@ -1,19 +1,10 @@
-import {AnswerType} from "@prisma/client";
+import {PartialAnswerEntity} from "./partial-answer.entity";
 
-import {ApiProperty} from "@nestjs/swagger";
-
-export class AnswerEntity{
+export class AnswerEntity extends PartialAnswerEntity{
     id: string;
 
-    questionSum?: string;
-    correct: boolean;
-
-    @ApiProperty({enum: AnswerType, required: true})
-    type: AnswerType;
-
-    answerContent: string;
-
     constructor(partial: Partial<AnswerEntity>){
+        super();
         Object.assign(this, partial);
     }
 }
