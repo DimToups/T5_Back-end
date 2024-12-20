@@ -44,11 +44,11 @@ export class FileService{
         if(!question.user_id || user.id !== question.user_id)
             throw new ForbiddenException("You're not allowed to upload a file for this answer.");
 
-        if(file.mimetype.split("/")[0] == "image"){
+        if(file.mimetype.split("/")[0] === "image"){
             const image = await this.convertImage(await this.resizeImage(file.buffer, 1024, 1024));
             return this.saveFile(answerId, image, "webp");
         }
-        if(file.mimetype.split("/")[0] == "audio"){
+        if(file.mimetype.split("/")[0] === "audio"){
             const audio = await this.convertAudio(file.buffer);
             return this.saveFile(answerId, audio, "opus");
         }
