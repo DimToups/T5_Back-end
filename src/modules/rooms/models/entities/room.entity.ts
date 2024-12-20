@@ -1,5 +1,10 @@
+import {GameModes} from "@prisma/client";
+import {ApiProperty} from "@nestjs/swagger";
+
 export class RoomEntity{
-    gameId: string;
+    id: string;
     startedAt?: Date;
     maxPlayers: number;
+    @ApiProperty({enum: GameModes})
+    gameMode: GameModes;
 }

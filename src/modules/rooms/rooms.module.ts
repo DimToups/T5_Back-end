@@ -4,12 +4,12 @@ import {RoomsController} from "./rooms.controller";
 import {RoomsService} from "./rooms.service";
 import {RoomsGateway} from "./rooms.gateway";
 import {GamesModule} from "../games/games.module";
-import {WsRoomAuthGuard} from "./guards/ws-room.guard";
+import {RoomAuthGuard} from "./guards/room.guard";
 
 @Module({
     imports: [ServicesModule, GamesModule],
     controllers: [RoomsController],
-    providers: [RoomsService, RoomsGateway, WsRoomAuthGuard],
+    providers: [RoomsService, RoomsGateway, RoomAuthGuard],
     exports: [],
 })
 export class RoomsModule{}
