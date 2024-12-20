@@ -10,12 +10,13 @@ import {ConfigService} from "@nestjs/config";
 import {CreateRoomResponse} from "./models/responses/create-room.response";
 import {RoomEntity} from "./models/entities/room.entity";
 import {RoomPlayerEntity} from "./models/entities/room-player.entity";
-import {RoomPlayers, Teams} from "@prisma/client";
+import {GameModes, RoomPlayers, Teams} from "@prisma/client";
 import {TeamEntity} from "./models/entities/team.entity";
 import {JoinRoomDto} from "./models/dto/join-room.dto";
 import {RoomsGateway} from "./rooms.gateway";
 import {CompleteRoomEntity} from "./models/entities/complete-room.entity";
 import {PublicQuestionEntity} from "../games/models/entities/public-question.entity";
+import {QuestionResponse} from "./models/responses/question.response";
 
 @Injectable()
 export class RoomsService{
@@ -30,6 +31,24 @@ export class RoomsService{
         private readonly roomsGatewayService: RoomsGateway,
     ){}
 
+    private async getRoomData(roomId: string): Promise<CompleteRoomEntity>{
+        const room = await this.prismaService.rooms.findFirst({
+            where: {
+                game_id: roomId,
+            },
+            include: {
+                game: true,
+                room_players: {
+                    include: {
+                        user: true,
+                    },
+                },
+                teams: true,
+            },
+        });
+        return this.generateCreateRoomResponse(undefined, room.room_players, room, room.teams);
+    }
+
     private generateCreateRoomResponse(jwt: string, roomPlayers: any[], room: any, roomTeams: Teams[]): CreateRoomResponse{
         return {
             token: jwt,
@@ -38,6 +57,7 @@ export class RoomsService{
                 username: player.username,
                 owner: player.owner,
                 roomId: player.room_id,
+                // TODO: Add score
                 user: player.user
                     ? {
                         id: player.user.id,
@@ -184,13 +204,15 @@ export class RoomsService{
             },
         });
         const response = this.generateCreateRoomResponse(jwt, roomPlayers, room, roomTeams);
+        const exportedResponse = JSON.parse(JSON.stringify(response));
+        delete exportedResponse.token;
         this.roomsGatewayService.onRoomUpdate(roomId, {
             room: response.room,
             players: response.players,
             teams: response.teams,
         });
-        if(room.game.mode === "MULTIPLAYER" && roomPlayers.length === room.max_players)
-            this.startedRooms.push(this.startScrumRoom(response));
+        if(room.game.mode === GameModes.MULTIPLAYER && roomPlayers.length === room.max_players)
+            this.startedRooms.push(this.startScrumRoom(exportedResponse));
         return response;
     }
 
@@ -215,8 +237,8 @@ export class RoomsService{
         await this.sleep(5000); // 5s
         const question: PublicQuestionEntity = await this.gamesService.getCurrentQuestion(roomData.room.id);
         this.roomsGatewayService.onQuestionStart(roomData.room.id, {
-
-        });
+            question,
+        } as QuestionResponse);
     }
 
     private async startTeamRoom(roomData: CompleteRoomEntity): Promise<void>{
@@ -234,5 +256,33 @@ export class RoomsService{
             endAt: new Date(Date.now() + 5000), // 5s
         });
         await this.sleep(5000); // 5s
+        let questionDuration: number;
+        switch (roomData.room.gameMode){
+            case GameModes.TEAM_EASY:
+                questionDuration = 30000; // 30s
+                break;
+            case GameModes.TEAM_MEDIUM:
+                questionDuration = 15000; // 15s
+                break;
+            case GameModes.TEAM_HARD:
+                questionDuration = 5000; // 5s
+                break;
+        }
+        const questionCount: number = await this.gamesService.getQuestionCount(roomData.room.id);
+        for(let i: number = 0; i < questionCount; i++){
+            const question: PublicQuestionEntity = await this.gamesService.getCurrentQuestion(roomData.room.id);
+            this.roomsGatewayService.onQuestionStart(roomData.room.id, {
+                question,
+                endAt: new Date(Date.now() + questionDuration),
+            } as QuestionResponse);
+            await this.sleep(questionDuration);
+            this.roomsGatewayService.onQuestionEnd(roomData.room.id, {
+                // TODO: Add question end data
+                endAt: new Date(Date.now() + 5000), // 5s
+            });
+            await this.sleep(5000); // 5s
+            await this.gamesService.nextQuestion(roomData.room.id);
+        }
+        this.roomsGatewayService.onRoomEnd(roomData.room.id, await this.getRoomData(roomData.room.id));
     }
 }

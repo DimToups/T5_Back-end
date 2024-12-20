@@ -4,6 +4,7 @@ import {Server} from "socket.io";
 import {AuthenticatedSocketEntity} from "./models/entities/authenticated-socket.entity";
 import {WsRoomAuthGuard} from "./guards/ws-room.guard";
 import {CompleteRoomEntity} from "./models/entities/complete-room.entity";
+import {QuestionResponse} from "./models/responses/question.response";
 
 @WebSocketGateway({
     namespace: "rooms",
@@ -49,7 +50,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect{
         }
     }
 
-    private onEvent(roomId, eventName: string, data: any){
+    private onEvent(roomId: string, eventName: string, data: any){
         if(this.roomClients.has(roomId)){
             this.roomClients.get(roomId).forEach((client: AuthenticatedSocketEntity) => client.emit(eventName, data));
             this.logger.log(`Event ${eventName} emitted for ${roomId}`);
@@ -64,7 +65,19 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect{
         this.onEvent(roomId, "onRoomStart", data);
     }
 
-    onQuestionStart(roomId: string, data: any){
+    onQuestionStart(roomId: string, data: QuestionResponse){
         this.onEvent(roomId, "onQuestionStart", data);
+    }
+
+    onQuestionEnd(roomId: string, data: any){
+        this.onEvent(roomId, "onQuestionEnd", data);
+    }
+
+    onPlayerAnswer(roomId: string, data: any){
+        this.onEvent(roomId, "onPlayerAnswer", data);
+    }
+
+    onRoomEnd(roomId: string, data: CompleteRoomEntity){
+        this.onEvent(roomId, "onRoomEnd", data);
     }
 }

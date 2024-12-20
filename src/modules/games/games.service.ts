@@ -1,4 +1,10 @@
-import {ForbiddenException, Injectable, NotFoundException, UnauthorizedException} from "@nestjs/common";
+import {
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
+    UnauthorizedException,
+} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {UserEntity} from "../users/models/entities/user.entity";
 import {Categories, Difficulties, GameModes, Games} from "@prisma/client";
@@ -260,6 +266,8 @@ export class GamesService{
                 },
             },
         });
+        if(game.mode === GameModes.MULTIPLAYER || game.mode === GameModes.TEAM_EASY || game.mode === GameModes.TEAM_MEDIUM || game.mode === GameModes.TEAM_HARD)
+            throw new BadRequestException("You can't answer questions using this way for this game mode");
         await this.prismaService.statisticsAnswers.create({
             data: {
                 game_id: gameId,
@@ -293,5 +301,50 @@ export class GamesService{
     async createQuickGame(amount: number, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<GameEntity>{
         let quiz: QuizEntity = await this.quizService.createQuickQuiz(amount, difficulty, category, user);
         return await this.startGame(quiz.id, user);
+    }
+
+    async getQuestionCount(gameId: string): Promise<number>{
+        const game = await this.prismaService.games.findUnique({
+            where: {
+                id: gameId,
+            },
+            include: {
+                quiz: {
+                    include: {
+                        quiz_questions: true,
+                    },
+                },
+            },
+        });
+        return game.quiz.quiz_questions.length;
+    }
+
+    async nextQuestion(gameId: string): Promise<void>{
+        const game = await this.prismaService.games.findUnique({
+            where: {
+                id: gameId,
+            },
+        });
+        if(game.current_question >= await this.getQuestionCount(gameId)){
+            await this.prismaService.games.update({
+                where: {
+                    id: gameId,
+                },
+                data: {
+                    ended_at: new Date(),
+                },
+            });
+            return;
+        }
+        await this.prismaService.games.update({
+            where: {
+                id: gameId,
+            },
+            data: {
+                current_question: {
+                    increment: 1,
+                },
+            },
+        });
     }
 }
