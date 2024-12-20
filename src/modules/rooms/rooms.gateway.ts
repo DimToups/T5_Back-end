@@ -15,7 +15,7 @@ import {QuestionResponse} from "./models/responses/question.response";
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect{
     private readonly logger: Logger = new Logger(RoomsGateway.name);
     @WebSocketServer() server: Server;
-    private readonly roomClients: Map<string, any[]> = new Map<string, any[]>();
+    private readonly roomClients: Map<string, AuthenticatedSocketEntity[]> = new Map<string, AuthenticatedSocketEntity[]>();
 
     constructor(
         private readonly roomAuthGuardService: RoomAuthGuard,
