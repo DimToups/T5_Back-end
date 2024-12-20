@@ -99,7 +99,7 @@ export class GamesService{
     }
 
     async startGame(quizId: string, user?: UserEntity, gameMode: GameModes = GameModes.SINGLEPLAYER): Promise<GameEntity>{
-        const quiz: any = await this.prismaService.quiz.findUnique({
+        const quiz = await this.prismaService.quiz.findUnique({
             where: {
                 id: quizId,
             },
@@ -120,6 +120,24 @@ export class GamesService{
                 mode: gameMode,
             },
         });
+        // time mode
+        if(gameMode === GameModes.TIME_EASY || gameMode === GameModes.TIME_MEDIUM || gameMode === GameModes.TIME_HARD){
+            await this.prismaService.timeLimits.create({
+                data: {
+                    game: {
+                        connect: {
+                            id: game.id,
+                        },
+                    },
+                    question: {
+                        connect: {
+                            sum: quiz.quiz_questions[0].question_id,
+                        },
+                    },
+                    time_limit: new Date(new Date().getTime() + GamesService.getTimeLimit(gameMode) * 1000),
+                },
+            });
+        }
         return {
             id: game.id,
             mode: game.mode,
@@ -253,7 +271,33 @@ export class GamesService{
         });
         const correctAnswer = question.answers.find(answer => answer.correct);
         const isCorrect: boolean = correctAnswer?.id === answer;
-        const game: Games = await this.prismaService.games.update({
+        let incrementScore = isCorrect ? 1 : 0;
+        // time mode
+        let game: Games = await this.prismaService.games.findUnique({
+            where: {
+                id: gameId,
+            },
+        });
+        if(game.mode === GameModes.TIME_EASY || game.mode === GameModes.TIME_MEDIUM || game.mode === GameModes.TIME_HARD){
+            // check if time limit is reached
+            const timeLimit = GamesService.getTimeLimit(game.mode);
+            const dateTimeLimit = new Date(new Date().getTime() + timeLimit * 1000);
+            const timeLimits = await this.prismaService.timeLimits.findFirst({
+                where: {
+                    game: {
+                        id: gameId,
+                    },
+                    question: {
+                        sum: question.sum,
+                    },
+                },
+            });
+            // if time limit is reached or superior to current time, do not increment score
+            if(timeLimits.time_limit.getTime() <= new Date().getTime()){
+                incrementScore = 0;
+            }
+        }
+        game = await this.prismaService.games.update({
             where: {
                 id: gameId,
             },
@@ -262,7 +306,7 @@ export class GamesService{
                     increment: 1,
                 },
                 score: {
-                    increment: isCorrect ? 1 : 0,
+                    increment: incrementScore,
                 },
             },
         });
@@ -279,6 +323,26 @@ export class GamesService{
         let nextQuestion: PublicQuestionEntity | undefined;
         try{
             nextQuestion = await this.getCurrentQuestion(game.id, user);
+            // time mode
+            if(game.mode === GameModes.TIME_EASY || game.mode === GameModes.TIME_MEDIUM || game.mode === GameModes.TIME_HARD){
+                const timeLimit = GamesService.getTimeLimit(game.mode);
+                const dateTimeLimit = new Date(new Date().getTime() + timeLimit * 1000);
+                await this.prismaService.timeLimits.create({
+                    data: {
+                        game: {
+                            connect: {
+                                id: gameId,
+                            },
+                        },
+                        question: {
+                            connect: {
+                                sum: nextQuestion.sum,
+                            },
+                        },
+                        time_limit: dateTimeLimit,
+                    },
+                });
+            }
         }catch(_){
             // Only possible error is question not found (end of quiz)
             await this.prismaService.games.update({
@@ -296,6 +360,22 @@ export class GamesService{
             score: game.score,
             nextQuestion,
         };
+    }
+
+    /**
+     * Time limit by gameMode
+     * @param gameMode
+     * @return time in seconds
+     */
+    private static getTimeLimit(gameMode: GameModes): number{
+        if(gameMode === GameModes.TIME_EASY){
+            return 30;
+        }else if(gameMode === GameModes.TIME_MEDIUM){
+            return 15;
+        }else if(gameMode === GameModes.TIME_HARD){
+            return 5;
+        }
+        return 0;
     }
 
     async createQuickGame(amount: number, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<GameEntity>{
