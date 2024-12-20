@@ -127,6 +127,7 @@ model Games {
   ended_at         DateTime?
   answers          StatisticsAnswers[]
   room             Rooms?
+  TimeLimits       TimeLimits[]
 
   @@map("games")
 }
@@ -141,8 +142,20 @@ model Questions {
   user               Users?              @relation(fields: [user_id], references: [id], onDelete: Cascade)
   quiz_questions     QuizQuestions[]
   statistics_answers StatisticsAnswers[]
+  TimeLimits         TimeLimits[]
 
   @@map("questions")
+}
+
+model TimeLimits {
+  game_id      String
+  game         Games     @relation(fields: [game_id], references: [id], onDelete: Cascade)
+  question_sum String
+  question     Questions @relation(fields: [question_sum], references: [sum], onDelete: Cascade)
+  time_limit   DateTime
+
+  @@id([game_id, question_sum])
+  @@map("time_limits")
 }
 
 model Answers {
