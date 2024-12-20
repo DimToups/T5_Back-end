@@ -9,6 +9,7 @@ import {CreateRoomResponse} from "./models/responses/create-room.response";
 import {JoinRoomDto} from "./models/dto/join-room.dto";
 import {RoomAuthGuard} from "./guards/room.guard";
 import {AuthenticatedRequestEntity} from "./models/entities/authenticated-request.entity";
+import {SubmitAnswerDto} from "../games/models/dto/submit-answer.dto";
 
 @Controller("rooms")
 @ApiTags("Rooms")
@@ -75,11 +76,37 @@ export class RoomsController{
         return this.roomsService.startRoom(req.room.id, req.player.id);
     }
 
+    /**
+     * Join a team (for team mode only)
+     *
+     * @throws {400} Bad Request
+     * @throws {401} Unauthorized
+     * @throws {403} Forbidden
+     * @throws {404} Not Found
+     * @throws {500} Internal Server Error
+     */
     @Post("team/:team_id/join")
     @UseGuards(RoomAuthGuard)
     @ApiBearerAuth()
     @HttpCode(HttpStatus.NO_CONTENT)
     async joinTeam(@Req() req: AuthenticatedRequestEntity, @Param("team_id") teamId: string): Promise<void>{
         return this.roomsService.joinTeam(req.room.id, req.player.id, teamId);
+    }
+
+    /**
+     * Submit an answer to the current question
+     *
+     * @throws {400} Bad Request
+     * @throws {401} Unauthorized
+     * @throws {403} Forbidden
+     * @throws {404} Not Found
+     * @throws {500} Internal Server Error
+     */
+    @Post("answer")
+    @UseGuards(RoomAuthGuard)
+    @ApiBearerAuth()
+    @HttpCode(HttpStatus.NO_CONTENT)
+    async answerQuestion(@Req() req: AuthenticatedRequestEntity, @Body() body: SubmitAnswerDto): Promise<void>{
+        return this.roomsService.answerQuestion(req.room.id, req.player.id, body);
     }
 }
