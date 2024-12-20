@@ -1,6 +1,6 @@
 import {Categories, Difficulties} from "@prisma/client";
 import {ApiProperty} from "@nestjs/swagger";
-import {AnswerEntity} from "./answer.entity";
+import {PartialAnswerEntity} from "./partial-answer.entity";
 
 export class PartialQuestionEntity{
     question: string;
@@ -10,5 +10,5 @@ export class PartialQuestionEntity{
     @ApiProperty({enum: Categories, required: false})
     category?: Categories;
 
-    answers: AnswerEntity[];
+    answers: PartialAnswerEntity[];
 }

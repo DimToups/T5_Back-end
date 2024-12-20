@@ -71,14 +71,18 @@ export class QuizService{
     }
 
     async getQuizDataById(quizId: string, user?: UserEntity): Promise<QuizEntity>{
-        const quiz: any = await this.prismaService.quiz.findUnique({
+        const quiz = await this.prismaService.quiz.findUnique({
             where: {
                 id: quizId,
             },
             include: {
                 quiz_questions: {
                     include: {
-                        question: true,
+                        question: {
+                            include: {
+                                answers: true,
+                            },
+                        },
                     },
                 },
             },
@@ -98,7 +102,7 @@ export class QuizService{
             difficulty: quiz.difficulty || undefined,
             category: quiz.category || undefined,
             userId: quiz.user_id || undefined,
-            questions: quiz.quiz_questions.map((quizQuestion: any): QuestionEntity => {
+            questions: quiz.quiz_questions.map((quizQuestion): QuestionEntity => {
                 const question = quizQuestion.question;
                 return {
                     sum: question.sum,
@@ -242,7 +246,7 @@ export class QuizService{
         description?: string,
         difficulty?: Difficulties,
         category?: Categories,
-    ): Promise<QuizEntity>{
+    ){
         let quiz: Quiz = await this.prismaService.quiz.findUnique({
             where: {
                 id: quizId,
@@ -257,47 +261,49 @@ export class QuizService{
         if(user && quiz.user_id !== user.id)
             throw new ForbiddenException("You must be the owner of the quiz to update it.");
 
-        quiz = await this.prismaService.quiz.update({
-            where: {
-                id: quizId,
-            },
-            data: {
-                title,
-                description,
-                difficulty,
-                category,
-            },
-        });
-        await this.prismaService.quizQuestions.deleteMany({
-            where: {
-                quiz_id: quizId,
-            },
-        });
-        const questions: QuestionEntity[] = await this.questionsService.addPartialQuestionsToDatabase(partialQuestions, user);
-        // Dedupe questions array
-        let filteredQuestions: QuestionEntity[] = questions.filter((value: QuestionEntity, index: number, self: QuestionEntity[]): boolean =>
-            index === self.findIndex((t: QuestionEntity) => (
-                t.sum === value.sum
-            )),
-        );
-        const quizQuestions: QuizQuestions[] = filteredQuestions.map((question: QuestionEntity): QuizQuestions => {
-            return {
-                quiz_id: quizId,
-                question_id: question.sum,
-                position: questions.findIndex((q: QuestionEntity): boolean => q.sum === question.sum),
-            } as QuizQuestions;
-        });
-        await this.prismaService.quizQuestions.createMany({
-            data: quizQuestions,
-        });
-        return new QuizEntity({
-            id: quiz.id,
-            title: quiz.title,
-            description: quiz.description || undefined,
-            difficulty: quiz.difficulty || undefined,
-            category: quiz.category || undefined,
-            userId: quiz.user_id || undefined,
-            questions,
+        return this.prismaService.$transaction(async(tx) => {
+            quiz = await tx.quiz.update({
+                where: {
+                    id: quizId,
+                },
+                data: {
+                    title,
+                    description,
+                    difficulty,
+                    category,
+                },
+            });
+            await tx.quizQuestions.deleteMany({
+                where: {
+                    quiz_id: quizId,
+                },
+            });
+            const questions: QuestionEntity[] = await this.questionsService.addPartialQuestionsToDatabase(partialQuestions, user, tx);
+            // Dedupe questions array
+            let filteredQuestions: QuestionEntity[] = questions.filter((value: QuestionEntity, index: number, self: QuestionEntity[]): boolean =>
+                index === self.findIndex((t: QuestionEntity) => (
+                    t.sum === value.sum
+                )),
+            );
+            const quizQuestions: QuizQuestions[] = filteredQuestions.map((question: QuestionEntity): QuizQuestions => {
+                return {
+                    quiz_id: quizId,
+                    question_id: question.sum,
+                    position: questions.findIndex((q: QuestionEntity): boolean => q.sum === question.sum),
+                } as QuizQuestions;
+            });
+            await tx.quizQuestions.createMany({
+                data: quizQuestions,
+            });
+            return new QuizEntity({
+                id: quiz.id,
+                title: quiz.title,
+                description: quiz.description || undefined,
+                difficulty: quiz.difficulty || undefined,
+                category: quiz.category || undefined,
+                userId: quiz.user_id || undefined,
+                questions,
+            });
         });
     }
 
