@@ -1,4 +1,4 @@
-import {BadRequestException, Injectable} from "@nestjs/common";
+import {BadRequestException, ForbiddenException, Injectable, NotFoundException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {CreateRoomDto} from "./models/dto/create-room.dto";
 import {UserEntity} from "../users/models/entities/user.entity";
@@ -10,7 +10,7 @@ import {ConfigService} from "@nestjs/config";
 import {CreateRoomResponse} from "./models/responses/create-room.response";
 import {RoomEntity} from "./models/entities/room.entity";
 import {RoomPlayerEntity} from "./models/entities/room-player.entity";
-import {GameModes, RoomPlayers, Teams} from "@prisma/client";
+import {GameModes, RoomPlayers, Rooms, Teams} from "@prisma/client";
 import {TeamEntity} from "./models/entities/team.entity";
 import {JoinRoomDto} from "./models/dto/join-room.dto";
 import {RoomsGateway} from "./rooms.gateway";
@@ -284,5 +284,71 @@ export class RoomsService{
             await this.gamesService.nextQuestion(roomData.room.id);
         }
         this.roomsGatewayService.onRoomEnd(roomData.room.id, await this.getRoomData(roomData.room.id));
+    }
+
+    async startRoom(roomId: string, playerId: string){
+        const room = await this.prismaService.rooms.findFirst({
+            where: {
+                game_id: roomId,
+            },
+            include: {
+                game: true,
+            },
+        });
+        if(!room)
+            throw new NotFoundException("Room not found");
+        if(room.started_at)
+            throw new BadRequestException("Room has already started");
+        const roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.findFirst({
+            where: {
+                id: playerId,
+                room_id: roomId,
+            },
+        });
+        if(!roomPlayer)
+            throw new NotFoundException("Room player not found");
+        if(!roomPlayer.owner)
+            throw new ForbiddenException("Room player is not room owner");
+        if(room.game.mode === GameModes.MULTIPLAYER)
+            this.startedRooms.push(this.startScrumRoom(await this.getRoomData(roomId)));
+        else
+            this.startedRooms.push(this.startTeamRoom(await this.getRoomData(roomId)));
+    }
+
+    async joinTeam(roomId: string, playerId: string, teamId: string){
+        const room: Rooms = await this.prismaService.rooms.findFirst({
+            where: {
+                game_id: roomId,
+            },
+        });
+        if(!room)
+            throw new NotFoundException("Room not found");
+        if(room.started_at)
+            throw new BadRequestException("Room has already started");
+        const roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.findFirst({
+            where: {
+                id: playerId,
+                room_id: roomId,
+            },
+        });
+        if(!roomPlayer)
+            throw new NotFoundException("Room player not found");
+        const team: Teams = await this.prismaService.teams.findFirst({
+            where: {
+                id: teamId,
+                room_id: roomId,
+            },
+        });
+        if(!team)
+            throw new NotFoundException("Team not found");
+        await this.prismaService.roomPlayers.update({
+            where: {
+                id: playerId,
+            },
+            data: {
+                team_id: teamId,
+            },
+        });
+        this.roomsGatewayService.onRoomUpdate(roomId, await this.getRoomData(roomId));
     }
 }

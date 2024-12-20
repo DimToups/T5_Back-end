@@ -2,7 +2,7 @@ import {OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway, WebSocketSer
 import {Logger} from "@nestjs/common";
 import {Server} from "socket.io";
 import {AuthenticatedSocketEntity} from "./models/entities/authenticated-socket.entity";
-import {WsRoomAuthGuard} from "./guards/ws-room.guard";
+import {RoomAuthGuard} from "./guards/room.guard";
 import {CompleteRoomEntity} from "./models/entities/complete-room.entity";
 import {QuestionResponse} from "./models/responses/question.response";
 
@@ -18,12 +18,12 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect{
     private readonly roomClients: Map<string, any[]> = new Map<string, any[]>();
 
     constructor(
-        private readonly wsRoomAuthGuardService: WsRoomAuthGuard,
+        private readonly roomAuthGuardService: RoomAuthGuard,
     ){}
 
     async handleConnection(client: AuthenticatedSocketEntity): Promise<void>{
         try{
-            await this.wsRoomAuthGuardService.authenticate(client);
+            await this.roomAuthGuardService.wsAuthenticate(client);
             if(!this.roomClients.has(client.room.id))
                 this.roomClients.set(client.room.id, [client]);
             else
