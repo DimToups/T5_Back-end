@@ -50,6 +50,7 @@ export class GamesService{
         if(user && game.user_id && game.user_id !== user.id)
             throw new ForbiddenException("You're not allowed to access this game.");
         return {
+            mode: game.mode,
             id: game.id,
             quizId: game.quiz_id,
             quizTitle: game.quiz.title,
@@ -84,6 +85,7 @@ export class GamesService{
         if(user && game.user_id && game.user_id !== user.id)
             throw new ForbiddenException("You're not allowed to access this game.");
         return {
+            mode: game.mode,
             id: game.id,
             quizId: game.quiz_id,
             quizTitle: game.quiz.title,
