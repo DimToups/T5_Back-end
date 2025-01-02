@@ -11,7 +11,7 @@ import {Categories, Difficulties, GameModes, Games} from "@prisma/client";
 import {CipherService} from "../../common/services/cipher.service";
 import {GameEntity} from "./models/entities/game.entity";
 import {PublicQuestionEntity} from "./models/entities/public-question.entity";
-import {SubmitAnswerResponse} from "./models/submit-answer.response";
+import {SubmitAnswerResponse} from "./models/responses/submit-answer.response";
 import {QuizService} from "../quiz/quiz.service";
 import {QuestionsService} from "../questions/questions.service";
 import {QuizEntity} from "../quiz/models/entity/quiz.entity";
@@ -50,6 +50,7 @@ export class GamesService{
         if(user && game.user_id && game.user_id !== user.id)
             throw new ForbiddenException("You're not allowed to access this game.");
         return {
+            mode: game.mode,
             id: game.id,
             quizId: game.quiz_id,
             quizTitle: game.quiz.title,
@@ -84,6 +85,7 @@ export class GamesService{
         if(user && game.user_id && game.user_id !== user.id)
             throw new ForbiddenException("You're not allowed to access this game.");
         return {
+            mode: game.mode,
             id: game.id,
             quizId: game.quiz_id,
             quizTitle: game.quiz.title,
@@ -376,6 +378,30 @@ export class GamesService{
             return 5;
         }
         return 0;
+    }
+
+    async isAnswerCorrect(questionSum: string, answer: string): Promise<boolean>{
+        const question = await this.prismaService.questions.findUnique({
+            where: {
+                sum: questionSum,
+            },
+            include: {
+                answers: true,
+            },
+        });
+        return question.answers.find(answer => answer.correct)?.id === answer;
+    }
+
+    async getCorrectAnswer(questionSum: string): Promise<string>{
+        const question = await this.prismaService.questions.findUnique({
+            where: {
+                sum: questionSum,
+            },
+            include: {
+                answers: true,
+            },
+        });
+        return question.answers.find(answer => answer.correct)?.id;
     }
 
     async createQuickGame(amount: number, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<GameEntity>{

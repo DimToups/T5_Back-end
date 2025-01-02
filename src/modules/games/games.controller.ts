@@ -8,7 +8,7 @@ import {AuthGuard} from "../users/guards/auth.guard";
 import {AuthenticatedRequest} from "../users/models/models/authenticated-request";
 import {PublicQuestionEntity} from "./models/entities/public-question.entity";
 import {SubmitAnswerDto} from "./models/dto/submit-answer.dto";
-import {SubmitAnswerResponse} from "./models/submit-answer.response";
+import {SubmitAnswerResponse} from "./models/responses/submit-answer.response";
 import {GenerateQuestionDto} from "../questions/models/dto/generate-question.dto";
 import {FastifyReply} from "fastify";
 import {PaginationDto} from "../../common/models/dto/pagination.dto";

@@ -7,4 +7,5 @@ export class RoomPlayerEntity{
     username?: string;
     owner: boolean;
     teamId?: string;
+    score: number;
 }

@@ -73,7 +73,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect{
         this.onEvent(roomId, "onQuestionEnd", data);
     }
 
-    onPlayerAnswer(roomId: string, data: any){
+    onPlayerAnswer(roomId: string, data: string[]){
         this.onEvent(roomId, "onPlayerAnswer", data);
     }
 

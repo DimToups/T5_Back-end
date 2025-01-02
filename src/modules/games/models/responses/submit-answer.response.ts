@@ -1,4 +1,4 @@
-import {PublicQuestionEntity} from "./entities/public-question.entity";
+import {PublicQuestionEntity} from "../entities/public-question.entity";
 
 export class SubmitAnswerResponse{
     isCorrect: boolean;
