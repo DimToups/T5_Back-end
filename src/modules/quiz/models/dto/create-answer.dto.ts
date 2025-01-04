@@ -1,6 +1,8 @@
 import {AnswerType} from "@prisma/client";
-import {IsBoolean, IsEnum, IsString, Length} from "class-validator";
+import {IsBoolean, IsEnum, IsObject, ValidateNested} from "class-validator";
 import {ApiProperty} from "@nestjs/swagger";
+import {AnswerContentDto} from "./answer-content.dto";
+import {Type} from "class-transformer";
 
 export class CreateAnswerDto{
     @ApiProperty({enum: AnswerType})
@@ -10,7 +12,8 @@ export class CreateAnswerDto{
     @IsBoolean()
     correct: boolean;
 
-    @IsString()
-    @Length(0, 140)
-    answerContent: string;
+    @IsObject()
+    @ValidateNested()
+    @Type(() => AnswerContentDto)
+    answerContent: AnswerContentDto;
 }

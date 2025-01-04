@@ -19,7 +19,14 @@ export class QuestionsService{
     ){}
 
     private generateQuestionSum(question: PartialQuestionEntity, user?: UserEntity): string{
-        const infos: string[] = [question.question, user?.id || "", question.difficulty || "", question.category || "", ...question.answers.map((answer: AnswerEntity) => answer.answerContent)];
+        const infos: string[] = [
+            question.question,
+            user?.id || "",
+            question.difficulty || "",
+            question.category || "",
+            ...question.answers.map(
+                (answer: AnswerEntity) => answer.answerContent
+            )];
         infos.sort();
         return this.cipherService.getSum(infos.join(""));
     }

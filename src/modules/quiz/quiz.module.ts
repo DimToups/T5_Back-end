@@ -3,11 +3,12 @@ import {QuizController} from "./quiz.controller";
 import {QuizService} from "./quiz.service";
 import {ServicesModule} from "../../common/services/services.module";
 import {QuestionsModule} from "../questions/questions.module";
+import {FileModule} from "../file/file.module";
 
 @Module({
     controllers: [QuizController],
     providers: [QuizService],
-    imports: [ServicesModule, QuestionsModule],
+    imports: [ServicesModule, QuestionsModule, FileModule],
     exports: [QuizService],
 })
 export class QuizModule{}

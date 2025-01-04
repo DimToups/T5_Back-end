@@ -85,7 +85,7 @@ export class FileService{
                 answer_content: path,
             },
         });
-        return path;
+        return path.split("/").pop();
     }
 
     private async convertImage(image: Buffer){

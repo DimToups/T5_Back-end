@@ -19,6 +19,8 @@ import {PaginationResponse} from "../../common/models/responses/pagination.respo
 import {UserQuizEntity} from "./models/entity/user-quiz.entity";
 import {AnswerEntity} from "../questions/models/entities/answer.entity";
 import {UpdateQuestionDto} from "./models/dto/update-question.dto";
+import {FileService} from "../file/file.service";
+import {File as MulterFile} from "@nest-lab/fastify-multer";
 
 @Injectable()
 export class QuizService{
@@ -26,7 +28,18 @@ export class QuizService{
         private readonly prismaService: PrismaService,
         private readonly cipherService: CipherService,
         private readonly questionsService: QuestionsService,
+        private readonly fileService: FileService,
     ){}
+
+    private stringToFile(base64String: string, fileName: string, mimeType: string): File{
+        const byteString = atob(base64String.split(",")[1]);
+        const arrayBuffer = new Uint8Array(byteString.length);
+        for(let i = 0; i < byteString.length; i++){
+            arrayBuffer[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([arrayBuffer], {type: mimeType});
+        return new File([blob], fileName, {type: mimeType});
+    };
 
     async createQuiz(title: string, description?: string, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<QuizEntity>{
         const quizId = this.cipherService.generateUuid(7);
@@ -155,25 +168,45 @@ export class QuizService{
             throw new NotFoundException("This question doesn't exist.");
         }
 
+        let answerContent: string[] = updateQuestion.answers.map(answer => answer.answerContent.answerContent);
+        if(updateQuestion.answers[0].type !== "TEXT"){
+            // handle file upload
+            const files = updateQuestion.answers.map(answer => this.stringToFile(answer.answerContent.answerContent, this.cipherService.generateUuid(7), answer.answerContent.type));
+            // save files
+            let filePaths: string[] = [];
+            for(let i = 0; i < files.length; i++){
+                const file = files[i];
+                const multerFile: MulterFile = {
+                    fieldname: file.name,
+                    originalname: file.name,
+                    filename: file.name,
+                    encoding: "7bit",
+                    mimetype: file.type,
+                    buffer: await file.arrayBuffer().then(buffer => Buffer.from(buffer)),
+                    size: file.size,
+                };
+                filePaths.push(await this.fileService.uploadFile(question.answers[i].id, multerFile, user));
+            }
+            answerContent = filePaths;
+        }
+
         const questionEntity = new QuestionEntity({
             sum: question.sum,
             question: question.question,
             difficulty: question.difficulty,
             category: question.category,
-            answers: question.answers.map(answer => new AnswerEntity({
+            answers: question.answers.map((answer, index) => new AnswerEntity({
                 id: answer.id,
                 questionSum: answer.question_sum,
                 correct: answer.correct,
                 type: answer.type,
-                answerContent: answer.answer_content,
+                answerContent: answerContent[index],
             })),
             userId: question.user_id,
         });
         if(this.isEqual(updateQuestion, questionEntity)){
             return questionEntity;
         }
-
-        // handle file upload
 
         const updatedQuestion = await this.prismaService.questions.update({
             where: {
@@ -184,10 +217,10 @@ export class QuizService{
                 difficulty: updateQuestion.difficulty,
                 category: updateQuestion.category,
                 answers: {
-                    create: updateQuestion.answers.map(answer => ({
+                    create: updateQuestion.answers.map((answer, index) => ({
                         type: answer.type,
                         correct: answer.correct,
-                        answer_content: answer.answerContent,
+                        answer_content: answerContent[index],
                         question_sum: question.sum,
                         id: this.cipherService.generateUuid(7),
                     })),
@@ -229,8 +262,7 @@ export class QuizService{
             let answer = question.answers[i];
             let answerDto = questionDto.answers[i];
             if(answer.type !== answerDto.type
-              || answer.correct !== answerDto.correct
-              || answer.answerContent !== answerDto.answerContent){
+              || answer.correct !== answerDto.correct){
                 return false;
             }
         }
