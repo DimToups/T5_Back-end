@@ -8,6 +8,8 @@ import {PartialQuestionEntity} from "./models/entities/partial-question.entity";
 import {UserEntity} from "../users/models/entities/user.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 import {AnswerEntity} from "./models/entities/answer.entity";
+import {FileService} from "../file/file.service";
+import {File} from "@nest-lab/fastify-multer";
 
 @Injectable()
 export class QuestionsService{
@@ -16,6 +18,7 @@ export class QuestionsService{
     constructor(
         private readonly prismaService: PrismaService,
         private readonly cipherService: CipherService,
+        private readonly fileService: FileService,
     ){}
 
     private generateQuestionSum(question: PartialQuestionEntity, user?: UserEntity): string{
@@ -25,7 +28,7 @@ export class QuestionsService{
             question.difficulty || "",
             question.category || "",
             ...question.answers.map(
-                (answer: AnswerEntity) => answer.answerContent
+                (answer: AnswerEntity) => answer.answerContent,
             )];
         infos.sort();
         return this.cipherService.getSum(infos.join(""));
@@ -168,8 +171,33 @@ export class QuestionsService{
                 question: question.question,
                 difficulty: question.difficulty,
                 category: question.category,
-                answers: question.answers,
+                answers: question.answers.map(answer => new AnswerEntity({
+                    answerContent: answer.answerContent,
+                    correct: answer.correct,
+                    type: answer.type,
+                    id: this.cipherService.generateUuid(7),
+                })),
                 userId: user?.id,
+            });
+        });
+        questions.forEach((question) => {
+            question.answers.forEach(async(answer) => {
+                answer.questionSum = question.sum;
+                // handle file upload
+                if(answer.type === "IMAGE" || answer.type === "SOUND"){
+                    const blob = new Blob([Buffer.from(answer.answerContent)]);
+                    const name = this.cipherService.generateUuid(7);
+                    const multerFile: File = {
+                        fieldname: name,
+                        originalname: name,
+                        filename: name,
+                        encoding: "7bit",
+                        mimetype: blob.type,
+                        buffer: await blob.arrayBuffer().then(buffer => Buffer.from(buffer)),
+                        size: blob.size,
+                    };
+                    answer.answerContent = await this.fileService.uploadFile(answer.id, multerFile, user);
+                }
             });
         });
         await prisma.questions.createMany({
