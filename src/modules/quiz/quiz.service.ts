@@ -129,8 +129,8 @@ export class QuizService{
         for(const question of questions){
             for(const answer of question.answers){
                 if(answer.type === "IMAGE" || answer.type === "SOUND"){
-                    const blob = new Blob([await this.fileService.getFile(answer.id)]);
-                    answer.answerContent = URL.createObjectURL(blob);
+                    const file = await this.fileService.getFile(answer.id);
+                    answer.answerContent = file.toString("base64");
                 }
             }
         }

@@ -1,4 +1,10 @@
-import {BadRequestException, ForbiddenException, Injectable, UnauthorizedException} from "@nestjs/common";
+import {
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
+    UnauthorizedException,
+} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {CipherService} from "../../common/services/cipher.service";
 import {UserEntity} from "../users/models/entities/user.entity";
@@ -22,22 +28,51 @@ export class FileService{
                 id: answerId,
             },
         });
+        if(!answer){
+            throw new NotFoundException("Answer not found");
+        }
         // get file from filesystem
-        return fs.readFileSync(answer.answer_content);
+        const path = join(process.cwd(), "public_answers", answer.answer_content);
+        return fs.readFileSync(path);
+    }
+
+    async uploadFileWithoutDb(answerId: string, file: File, user: UserEntity): Promise<string>{
+        if(!(await this.checkFile(answerId, file, user))){
+            throw new BadRequestException("File type not supported");
+        }
+
+        if(file.mimetype.split("/")[0] === "image"){
+            let image: Buffer<ArrayBufferLike>;
+            await sharp(file.buffer).metadata().then((result) => {
+                if(result.format === "webp" && result.width <= 1024 && result.height <= 1024){
+                    image = file.buffer;
+                }
+            });
+            if(!image){
+                image = await this.convertImage(await this.resizeImage(file.buffer, 1024, 1024));
+            }
+            return this.saveFileWithoutDb(answerId, image, "webp");
+        }
+        if(file.mimetype.split("/")[0] === "audio"){
+            const audio = await this.convertAudio(file.buffer);
+            return this.saveFileWithoutDb(answerId, audio, "opus");
+        }
+        throw new BadRequestException("File type not supported");
     }
 
     async uploadFile(answerId: string, file: File, user: UserEntity): Promise<string>{
-        if(!file.buffer){
-            throw new BadRequestException("No file uploaded");
+        if(!(await this.checkFile(answerId, file, user))){
+            throw new BadRequestException("File type not supported");
         }
-        if(!user){
-            throw new UnauthorizedException("You must be connected to upload a file.");
-        }
+
         const answer = await this.prismaService.answers.findUnique({
             where: {
                 id: answerId,
             },
         });
+        if(!answer){
+            throw new NotFoundException("Answer not found");
+        }
         const question = await this.prismaService.questions.findUnique({
             where: {
                 sum: answer.question_sum,
@@ -65,28 +100,44 @@ export class FileService{
         throw new BadRequestException("File type not supported");
     }
 
-    private async saveFile(answerId: string, file: Buffer, extension: string): Promise<string>{
+    private async checkFile(answerId: string, file: File, user: UserEntity): Promise<boolean>{
+        if(!file.buffer){
+            throw new BadRequestException("No file uploaded");
+        }
+        if(!user){
+            throw new UnauthorizedException("You must be connected to upload a file.");
+        }
+
+        if(file.mimetype.split("/")[0] === "image"){
+            return true;
+        }
+        if(file.mimetype.split("/")[0] === "audio"){
+            return true;
+        }
+        throw new BadRequestException("File type not supported");
+    }
+
+    private async saveFileWithoutDb(answerId: string, file: Buffer, extension: string): Promise<string>{
         const sum = this.cipherService.getSum(file.toString());
         const answer = await this.prismaService.answers.findUnique({
             where: {
                 id: answerId,
             },
         });
-        if(!answer){
-            throw new Error("Answer not found");
-        }
         const path = join(process.cwd(), "public_answers", sum + "." + extension);
-        if(answer.answer_content === path){
+        if(answer?.answer_content === path){
             return path;
         }
         if(!fs.existsSync(path)){
             const parentPath = path.substring(0, path.lastIndexOf("/"));
             fs.mkdirSync(parentPath, {recursive: true});
         }
-        if(fs.existsSync(answer.answer_content)){
-            fs.unlinkSync(answer.answer_content);
-        }
         fs.writeFileSync(path, file);
+        return path.split("/").pop();
+    }
+
+    private async saveFile(answerId: string, file: Buffer, extension: string): Promise<string>{
+        const path = await this.saveFileWithoutDb(answerId, file, extension);
         await this.prismaService.answers.update({
             where: {
                 id: answerId,
@@ -99,6 +150,7 @@ export class FileService{
     }
 
     private async convertImage(image: Buffer){
+        // check if image is already in webp format
         return await sharp(image).webp({
             preset: "picture",
             effort: 6,

@@ -1,6 +1,6 @@
 import {BadRequestException, Injectable, InternalServerErrorException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
-import {Answers, AnswerType, Categories, Difficulties, PrismaClient, Questions} from "@prisma/client";
+import {AnswerType, Categories, Difficulties, PrismaClient} from "@prisma/client";
 import {QuestionEntity} from "./models/entities/question.entity";
 import {CipherService} from "../../common/services/cipher.service";
 import * as he from "he";
@@ -20,6 +20,16 @@ export class QuestionsService{
         private readonly cipherService: CipherService,
         private readonly fileService: FileService,
     ){}
+
+    private static base64ToBlob(base64Data: string, contentType: string): Blob{
+        contentType = contentType || "";
+        const byteCharacters = atob(base64Data);
+        const byteArrays = new Uint8Array(byteCharacters.length);
+        for(let i = 0; i < byteCharacters.length; i++){
+            byteArrays[i] = byteCharacters.charCodeAt(i);
+        }
+        return new Blob([byteArrays], {type: contentType});
+    }
 
     private generateQuestionSum(question: PartialQuestionEntity, user?: UserEntity): string{
         const infos: string[] = [
@@ -172,7 +182,8 @@ export class QuestionsService{
                 difficulty: question.difficulty,
                 category: question.category,
                 answers: question.answers.map(answer => new AnswerEntity({
-                    answerContent: answer.answerContent,
+                    questionSum: this.generateQuestionSum(question, user),
+                    answerContent: "",
                     correct: answer.correct,
                     type: answer.type,
                     id: this.cipherService.generateUuid(7),
@@ -180,12 +191,13 @@ export class QuestionsService{
                 userId: user?.id,
             });
         });
-        questions.forEach((question) => {
-            question.answers.forEach(async(answer) => {
-                answer.questionSum = question.sum;
-                // handle file upload
-                if(answer.type === "IMAGE" || answer.type === "SOUND"){
-                    const blob = new Blob([Buffer.from(answer.answerContent)]);
+
+        for(let i = 0; i < partialQuestions.length; i++){
+            for(let j = 0; j < partialQuestions[i].answers.length; j++){
+                if(partialQuestions[i].answers[j].type === "IMAGE" || partialQuestions[i].answers[j].type === "SOUND"){
+                    const type = partialQuestions[i].answers[j].answerContent.split(";")[0].split(":")[1];
+                    const b64Data = partialQuestions[i].answers[j].answerContent.split(",")[1];
+                    const blob = QuestionsService.base64ToBlob(b64Data, type);
                     const name = this.cipherService.generateUuid(7);
                     const multerFile: File = {
                         fieldname: name,
@@ -196,12 +208,12 @@ export class QuestionsService{
                         buffer: await blob.arrayBuffer().then(buffer => Buffer.from(buffer)),
                         size: blob.size,
                     };
-                    answer.answerContent = await this.fileService.uploadFile(answer.id, multerFile, user);
+                    questions[i].answers[j].answerContent = await this.fileService.uploadFileWithoutDb(questions[i].answers[j].id, multerFile, user);
                 }
-            });
-        });
+            }
+        }
         await prisma.questions.createMany({
-            data: questions.map((question: QuestionEntity): Questions => {
+            data: questions.map((question: QuestionEntity) => {
                 return {
                     sum: question.sum,
                     question: question.question,
@@ -221,7 +233,7 @@ export class QuestionsService{
             },
         });
 
-        const data: Answers[] = [];
+        const data = [];
         for(const question of questions){
             data.push(...question.answers.map(answer => ({
                 question_sum: question.sum,
