@@ -108,6 +108,33 @@ export class QuizService{
             throw new UnauthorizedException("You must be connected to get this quiz.");
         if(user && quiz.user_id !== user.id)
             throw new ForbiddenException("You must be the owner of the quiz to get it.");
+
+        const questions = quiz.quiz_questions.map((quizQuestion): QuestionEntity => {
+            const question = quizQuestion.question;
+            return {
+                sum: question.sum,
+                question: question.question,
+                difficulty: question.difficulty,
+                category: question.category,
+                answers: question.answers.map(answer => new AnswerEntity({
+                    id: answer.id,
+                    questionSum: answer.question_sum,
+                    correct: answer.correct,
+                    type: answer.type,
+                    answerContent: answer.answer_content,
+                })),
+                userId: question.user_id,
+            };
+        });
+        for(const question of questions){
+            for(const answer of question.answers){
+                if(answer.type === "IMAGE" || answer.type === "SOUND"){
+                    const blob = new Blob([await this.fileService.getFile(answer.id)]);
+                    answer.answerContent = URL.createObjectURL(blob);
+                }
+            }
+        }
+
         return new QuizEntity({
             id: quiz.id,
             title: quiz.title,
@@ -115,23 +142,7 @@ export class QuizService{
             difficulty: quiz.difficulty || undefined,
             category: quiz.category || undefined,
             userId: quiz.user_id || undefined,
-            questions: quiz.quiz_questions.map((quizQuestion): QuestionEntity => {
-                const question = quizQuestion.question;
-                return {
-                    sum: question.sum,
-                    question: question.question,
-                    difficulty: question.difficulty,
-                    category: question.category,
-                    answers: question.answers.map(answer => new AnswerEntity({
-                        id: answer.id,
-                        questionSum: answer.question_sum,
-                        correct: answer.correct,
-                        type: answer.type,
-                        answerContent: answer.answer_content,
-                    })),
-                    userId: question.user_id,
-                } as QuestionEntity;
-            }),
+            questions: questions,
         });
     }
 

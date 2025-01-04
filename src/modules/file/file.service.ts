@@ -16,6 +16,16 @@ export class FileService{
         private readonly cipherService: CipherService,
     ){}
 
+    async getFile(answerId: string){
+        const answer = await this.prismaService.answers.findUnique({
+            where: {
+                id: answerId,
+            },
+        });
+        // get file from filesystem
+        return fs.readFileSync(answer.answer_content);
+    }
+
     async uploadFile(answerId: string, file: File, user: UserEntity): Promise<string>{
         if(!file.buffer){
             throw new BadRequestException("No file uploaded");

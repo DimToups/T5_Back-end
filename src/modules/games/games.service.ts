@@ -16,6 +16,7 @@ import {QuizService} from "../quiz/quiz.service";
 import {QuestionsService} from "../questions/questions.service";
 import {QuizEntity} from "../quiz/models/entity/quiz.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
+import {FileService} from "../file/file.service";
 
 @Injectable()
 export class GamesService{
@@ -24,6 +25,7 @@ export class GamesService{
         private readonly cipherService: CipherService,
         private readonly quizService: QuizService,
         private readonly questionsService: QuestionsService,
+        private readonly fileService: FileService,
     ){}
 
     private generateQuizCode(): string{
@@ -238,6 +240,16 @@ export class GamesService{
                 answerContent: answer.answer_content,
             };
         });
+        // get blob if image or sound
+        for(const answer of answers){
+            if(answer.type === "IMAGE" || answer.type === "SOUND"){
+                const blob = new Blob([await this.fileService.getFile(answer.id)]);
+                answer.answerContent = URL.createObjectURL(blob);
+            }
+        }
+        if(question.answers[0].type === "IMAGE" || question.answers[0].type === "SOUND"){
+
+        }
         if(question.answers.length === 4){
             answers.sort(() => Math.random() - 0.5);
             return {
