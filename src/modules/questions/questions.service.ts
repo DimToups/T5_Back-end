@@ -1,6 +1,6 @@
 import {BadRequestException, Injectable, InternalServerErrorException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
-import {Answers, AnswerType, Categories, Difficulties, PrismaClient, Questions} from "@prisma/client";
+import {AnswerType, Categories, Difficulties, PrismaClient} from "@prisma/client";
 import {QuestionEntity} from "./models/entities/question.entity";
 import {CipherService} from "../../common/services/cipher.service";
 import * as he from "he";
@@ -8,6 +8,8 @@ import {PartialQuestionEntity} from "./models/entities/partial-question.entity";
 import {UserEntity} from "../users/models/entities/user.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 import {AnswerEntity} from "./models/entities/answer.entity";
+import {FileService} from "../file/file.service";
+import {File} from "@nest-lab/fastify-multer";
 
 @Injectable()
 export class QuestionsService{
@@ -16,10 +18,28 @@ export class QuestionsService{
     constructor(
         private readonly prismaService: PrismaService,
         private readonly cipherService: CipherService,
+        private readonly fileService: FileService,
     ){}
 
+    private static base64ToBlob(base64Data: string, contentType: string): Blob{
+        contentType = contentType || "";
+        const byteCharacters = atob(base64Data);
+        const byteArrays = new Uint8Array(byteCharacters.length);
+        for(let i = 0; i < byteCharacters.length; i++){
+            byteArrays[i] = byteCharacters.charCodeAt(i);
+        }
+        return new Blob([byteArrays], {type: contentType});
+    }
+
     private generateQuestionSum(question: PartialQuestionEntity, user?: UserEntity): string{
-        const infos: string[] = [question.question, user?.id || "", question.difficulty || "", question.category || "", ...question.answers.map((answer: AnswerEntity) => answer.answerContent)];
+        const infos: string[] = [
+            question.question,
+            user?.id || "",
+            question.difficulty || "",
+            question.category || "",
+            ...question.answers.map(
+                (answer: AnswerEntity) => answer.answerContent,
+            )];
         infos.sort();
         return this.cipherService.getSum(infos.join(""));
     }
@@ -161,12 +181,39 @@ export class QuestionsService{
                 question: question.question,
                 difficulty: question.difficulty,
                 category: question.category,
-                answers: question.answers,
+                answers: question.answers.map(answer => new AnswerEntity({
+                    questionSum: this.generateQuestionSum(question, user),
+                    answerContent: "",
+                    correct: answer.correct,
+                    type: answer.type,
+                    id: this.cipherService.generateUuid(7),
+                })),
                 userId: user?.id,
             });
         });
+
+        for(let i = 0; i < partialQuestions.length; i++){
+            for(let j = 0; j < partialQuestions[i].answers.length; j++){
+                if(partialQuestions[i].answers[j].type === "IMAGE" || partialQuestions[i].answers[j].type === "SOUND"){
+                    const type = partialQuestions[i].answers[j].answerContent.split(";")[0].split(":")[1];
+                    const b64Data = partialQuestions[i].answers[j].answerContent.split(",")[1];
+                    const blob = QuestionsService.base64ToBlob(b64Data, type);
+                    const name = this.cipherService.generateUuid(7);
+                    const multerFile: File = {
+                        fieldname: name,
+                        originalname: name,
+                        filename: name,
+                        encoding: "7bit",
+                        mimetype: blob.type,
+                        buffer: await blob.arrayBuffer().then(buffer => Buffer.from(buffer)),
+                        size: blob.size,
+                    };
+                    questions[i].answers[j].answerContent = await this.fileService.uploadFileWithoutDb(questions[i].answers[j].id, multerFile, user);
+                }
+            }
+        }
         await prisma.questions.createMany({
-            data: questions.map((question: QuestionEntity): Questions => {
+            data: questions.map((question: QuestionEntity) => {
                 return {
                     sum: question.sum,
                     question: question.question,
@@ -186,7 +233,7 @@ export class QuestionsService{
             },
         });
 
-        const data: Answers[] = [];
+        const data = [];
         for(const question of questions){
             data.push(...question.answers.map(answer => ({
                 question_sum: question.sum,
