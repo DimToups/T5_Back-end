@@ -240,16 +240,6 @@ export class GamesService{
                 answerContent: answer.answer_content,
             };
         });
-        // get blob if image or sound
-        for(const answer of answers){
-            if(answer.type === "IMAGE" || answer.type === "SOUND"){
-                const blob = new Blob([await this.fileService.getFile(answer.id)]);
-                answer.answerContent = URL.createObjectURL(blob);
-            }
-        }
-        if(question.answers[0].type === "IMAGE" || question.answers[0].type === "SOUND"){
-
-        }
         if(question.answers.length === 4){
             answers.sort(() => Math.random() - 0.5);
             return {
