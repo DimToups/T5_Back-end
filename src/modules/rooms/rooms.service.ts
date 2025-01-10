@@ -18,6 +18,8 @@ import {CompleteRoomEntity} from "./models/entities/complete-room.entity";
 import {PublicQuestionEntity} from "../games/models/entities/public-question.entity";
 import {QuestionResponse} from "./models/responses/question.response";
 import {SubmitAnswerDto} from "../games/models/dto/submit-answer.dto";
+import {PublicQuizEntity} from "../quiz/models/entity/public-quiz.entity";
+import {QuizService} from "../quiz/quiz.service";
 
 @Injectable()
 export class RoomsService{
@@ -26,6 +28,7 @@ export class RoomsService{
 
     constructor(
         private readonly prismaService: PrismaService,
+        private readonly quizService: QuizService,
         private readonly gamesService: GamesService,
         private readonly cipherService: CipherService,
         private readonly jwtService: JwtService,
@@ -48,10 +51,11 @@ export class RoomsService{
                 teams: true,
             },
         });
-        return this.generateCreateRoomResponse(undefined, room.room_players, room, room.teams);
+        const quiz = await this.quizService.getPublicQuiz(room.game.quiz_id);
+        return this.generateCreateRoomResponse(undefined, room.room_players, room, room.teams, quiz);
     }
 
-    private generateCreateRoomResponse(jwt: string, roomPlayers: any[], room: any, roomTeams: Teams[]): CreateRoomResponse{
+    private generateCreateRoomResponse(jwt: string, roomPlayers: any[], room: any, roomTeams: Teams[], quiz: PublicQuizEntity): CreateRoomResponse{
         return {
             token: jwt,
             players: roomPlayers.map((player): RoomPlayerEntity => ({
@@ -82,6 +86,7 @@ export class RoomsService{
                 id: team.id,
                 score: roomPlayers.filter(player => player.team_id === team.id).reduce((acc, player) => acc + player.score, 0) / roomPlayers.filter(player => player.team_id === team.id).length,
             })),
+            quiz,
         } as CreateRoomResponse;
     }
 
@@ -111,11 +116,12 @@ export class RoomsService{
                 owner: true,
             },
         });
+        const quiz = await this.quizService.getPublicQuiz(createRoomDto.quizId);
         const jwt: string = this.jwtService.generateJWT({
             playerId: roomPlayer.id,
             roomId: room.game_id,
         }, "1d", this.configService.get<string>("JWT_SECRET"));
-        return this.generateCreateRoomResponse(jwt, [roomPlayer], room, []);
+        return this.generateCreateRoomResponse(jwt, [roomPlayer], room, [], quiz);
     }
 
     async createTeamRoom(createRoomDto: CreateRoomDto, user?: UserEntity): Promise<CreateRoomResponse>{
@@ -155,11 +161,12 @@ export class RoomsService{
                 owner: true,
             },
         });
+        const quiz = await this.quizService.getPublicQuiz(createRoomDto.quizId);
         const jwt: string = this.jwtService.generateJWT({
             playerId: roomPlayer.id,
             roomId: room.game_id,
         }, "1d", this.configService.get<string>("JWT_SECRET"));
-        return this.generateCreateRoomResponse(jwt, [roomPlayer], room, teams);
+        return this.generateCreateRoomResponse(jwt, [roomPlayer], room, teams, quiz);
     }
 
     async joinRoom(roomId: string, body: JoinRoomDto, user?: UserEntity): Promise<CreateRoomResponse>{
@@ -207,7 +214,8 @@ export class RoomsService{
                 room_id: roomId,
             },
         });
-        const response = this.generateCreateRoomResponse(jwt, roomPlayers, room, roomTeams);
+        const quiz = await this.quizService.getPublicQuiz(room.game.quiz_id);
+        const response = this.generateCreateRoomResponse(jwt, roomPlayers, room, roomTeams, quiz);
         const exportedResponse = JSON.parse(JSON.stringify(response));
         delete exportedResponse.token;
         this.roomsGatewayService.onRoomUpdate(roomId, {

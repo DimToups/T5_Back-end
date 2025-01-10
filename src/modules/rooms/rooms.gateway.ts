@@ -61,7 +61,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect{
         this.onEvent(roomId, "onRoomUpdate", data);
     }
 
-    onRoomStart(roomId: string, data: any){
+    onRoomStart(roomId: string, data: CompleteRoomEntity & {endAt: Date; }){
         this.onEvent(roomId, "onRoomStart", data);
     }
 
@@ -69,10 +69,15 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect{
         this.onEvent(roomId, "onQuestionStart", data);
     }
 
-    onQuestionEnd(roomId: string, data: any){
+    onQuestionEnd(roomId: string, data: CompleteRoomEntity & {correctAnswer: string; endAt: Date; }){
         this.onEvent(roomId, "onQuestionEnd", data);
     }
 
+    /**
+     * Emit player answer
+     * @param roomId
+     * @param data who has answered
+     */
     onPlayerAnswer(roomId: string, data: string[]){
         this.onEvent(roomId, "onPlayerAnswer", data);
     }
