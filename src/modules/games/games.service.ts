@@ -102,7 +102,10 @@ export class GamesService{
         } as GameEntity;
     }
 
-    async startGame(quizId: string, user?: UserEntity, gameMode: GameModes = GameModes.SINGLEPLAYER): Promise<GameEntity>{
+    async startGame(quizId: string, user?: UserEntity, gameMode?: GameModes): Promise<GameEntity>{
+        if(!gameMode){
+            gameMode = GameModes.SINGLEPLAYER;
+        }
         const quiz = await this.prismaService.quiz.findUnique({
             where: {
                 id: quizId,

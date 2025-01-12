@@ -1,10 +1,10 @@
-import {Difficulties} from "@prisma/client";
+import {GameModes} from "@prisma/client";
 import {IsEnum, IsOptional} from "class-validator";
 import {ApiProperty} from "@nestjs/swagger";
 
 export class NewGameDto{
-    @ApiProperty({enum: Difficulties})
-    @IsEnum(Difficulties)
+    @ApiProperty({enum: GameModes})
+    @IsEnum(GameModes)
     @IsOptional()
-    difficulty?: Difficulties;
+    gameMode?: GameModes;
 }
