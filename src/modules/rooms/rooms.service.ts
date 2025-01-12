@@ -192,13 +192,14 @@ export class RoomsService{
         });
         if(room.max_players && roomPlayers.length >= room.max_players)
             throw new BadRequestException("Room is full");
+        const playerId = this.cipherService.generateUuid(7);
         const jwt: string = this.jwtService.generateJWT({
-            playerId: this.cipherService.generateUuid(7),
+            playerId,
             roomId: roomId,
         }, "1d", this.configService.get<string>("JWT_SECRET"));
         const roomPlayer = await this.prismaService.roomPlayers.create({
             data: {
-                id: this.cipherService.generateUuid(7),
+                id: playerId,
                 room_id: roomId,
                 user_id: user ? user.id : null,
                 username: body.playerName,
