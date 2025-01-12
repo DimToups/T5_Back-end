@@ -103,7 +103,7 @@ export class RoomAuthGuard implements CanActivate{
             },
         });
         if(!player)
-            return {};
+            return {room};
         return {
             room,
             player,

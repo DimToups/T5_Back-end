@@ -287,8 +287,6 @@ export class GamesService{
         });
         if(game.mode === GameModes.TIME_EASY || game.mode === GameModes.TIME_MEDIUM || game.mode === GameModes.TIME_HARD){
             // check if time limit is reached
-            const timeLimit = GamesService.getTimeLimit(game.mode);
-            const dateTimeLimit = new Date(new Date().getTime() + timeLimit * 1000);
             const timeLimits = await this.prismaService.timeLimits.findFirst({
                 where: {
                     game: {
