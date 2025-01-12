@@ -63,7 +63,6 @@ export class RoomsService{
                 username: player.username,
                 owner: player.owner,
                 roomId: player.room_id,
-                // TODO: Add score
                 user: player.user
                     ? {
                         id: player.user.id,
@@ -416,13 +415,12 @@ export class RoomsService{
             });
         // Trigger specific logic for scrum mode
         const isAllPlayersAnswered = this.playerAnswers.get(roomId)[currentQuestion.position].length === roomPlayers.length;
-        if(room.game.mode === GameModes.MULTIPLAYER)
-            this.answerScrumQuestion(roomId, isAnswerCorrect, isAllPlayersAnswered, correctAnswer);
         // Trigger update for clients
         this.roomsGatewayService.onPlayerAnswer(roomId, this.playerAnswers.get(roomId)[currentQuestion.position]);
+        await this.endCheck(roomId, isAnswerCorrect, isAllPlayersAnswered, correctAnswer);
     }
 
-    private async answerScrumQuestion(roomId: string, isAnswerCorrect: boolean, isAllPlayersAnswered: boolean, correctAnswer: string): Promise<void>{
+    private async endCheck(roomId: string, isAnswerCorrect: boolean, isAllPlayersAnswered: boolean, correctAnswer: string): Promise<void>{
         if(!isAnswerCorrect && !isAllPlayersAnswered)
             return;
         this.roomsGatewayService.onQuestionEnd(roomId, {
@@ -434,12 +432,19 @@ export class RoomsService{
         // Don't trigger next question if there is no more questions
         const questionCount: number = await this.gamesService.getQuestionCount(roomId);
         const currentQuestion = await this.gamesService.getCurrentQuestion(roomId);
-        if(currentQuestion.position === questionCount - 1){
+        if(currentQuestion.position === questionCount){
             this.roomsGatewayService.onRoomEnd(roomId, await this.getRoomData(roomId));
             return;
         }
         await this.gamesService.nextQuestion(roomId);
-        const question: PublicQuestionEntity = await this.gamesService.getCurrentQuestion(roomId);
+        let question: PublicQuestionEntity;
+        try{
+            question = await this.gamesService.getCurrentQuestion(roomId);
+        }catch(err: any){
+            // end of quiz
+            this.roomsGatewayService.onRoomEnd(roomId, await this.getRoomData(roomId));
+            return;
+        }
         this.roomsGatewayService.onQuestionStart(roomId, {
             question,
         } as QuestionResponse);
