@@ -14,7 +14,7 @@ import {FastifyReply} from "fastify";
 import {PaginationDto} from "../../common/models/dto/pagination.dto";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 import {NewGameDto} from "./models/dto/new-game.dto";
-import {Difficulties, GameModes} from "@prisma/client";
+import {GameModes} from "@prisma/client";
 
 @Controller("games")
 @ApiTags("Games")
@@ -34,14 +34,11 @@ export class GamesController{
     @UseGuards(MaybeAuthGuard)
     @ApiBearerAuth()
     async startGame(@Req() req: MaybeAuthenticatedRequest, @Param("quiz_id") quizId: string, @Body() body: NewGameDto): Promise<GameEntity>{
-        if(body.difficulty === Difficulties.EASY){
-            console.log("Difficulty easy");
+        if(body.gameMode === GameModes.TIME_EASY){
             return this.gamesService.startGame(quizId, req.user, GameModes.TIME_EASY);
-        }else if(body.difficulty === Difficulties.MEDIUM){
-            console.log("Difficulty medium");
+        }else if(body.gameMode === GameModes.TIME_MEDIUM){
             return this.gamesService.startGame(quizId, req.user, GameModes.TIME_MEDIUM);
-        }else if(body.difficulty === Difficulties.HARD){
-            console.log("Difficulty hard");
+        }else if(body.gameMode === GameModes.TIME_HARD){
             return this.gamesService.startGame(quizId, req.user, GameModes.TIME_HARD);
         }
         return this.gamesService.startGame(quizId, req.user);
