@@ -153,7 +153,7 @@ export class FileService{
         // check if image is already in webp format
         return await sharp(image).webp({
             preset: "picture",
-            effort: 6,
+            effort: 4,
             smartSubsample: false,
             quality: 80,
             nearLossless: false,
