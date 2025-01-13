@@ -108,13 +108,21 @@ export class RoomsService{
                 game: true,
             },
         });
-        const roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.create({
+        let roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.create({
             data: {
                 id: this.cipherService.generateUuid(7),
                 room_id: room.game_id,
                 user_id: user ? user.id : null,
                 username: createRoomDto.playerName,
                 owner: true,
+            },
+        });
+        roomPlayer = await this.prismaService.roomPlayers.findFirst({
+            where: {
+                id: roomPlayer.id,
+            },
+            include: {
+                user: true,
             },
         });
         const quiz = await this.quizService.getPublicQuiz(createRoomDto.quizId);
@@ -153,13 +161,21 @@ export class RoomsService{
                 room_id: room.game_id,
             },
         });
-        const roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.create({
+        let roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.create({
             data: {
                 id: this.cipherService.generateUuid(7),
                 room_id: room.game_id,
                 user_id: user ? user.id : null,
                 username: createRoomDto.playerName,
                 owner: true,
+            },
+        });
+        roomPlayer = await this.prismaService.roomPlayers.findFirst({
+            where: {
+                id: roomPlayer.id,
+            },
+            include: {
+                user: true,
             },
         });
         const quiz = await this.quizService.getPublicQuiz(createRoomDto.quizId);
