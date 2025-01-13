@@ -187,7 +187,10 @@ export class QuizService{
                 if(answer.answerContent instanceof AnswerContentDto){
                     return this.stringToFile(answer.answerContent.answerContent, this.cipherService.generateUuid(7), answer.answerContent.type);
                 }else{
-                    const mimetype = answer.answerContent.split(";")[0].split(":")[1];
+                    let mimetype = answer.type === "IMAGE" ? "image/webp" : "audio/opus";
+                    if(answer.answerContent.includes("data")){
+                        mimetype = answer.answerContent.split(";")[0].split(":")[1];
+                    }
                     return this.stringToFile(answer.answerContent, this.cipherService.generateUuid(7), mimetype);
                 }
             });
