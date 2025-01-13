@@ -360,7 +360,7 @@ export class QuizService{
                 userId: quiz.user_id || undefined,
                 questions,
             });
-        });
+        }, {timeout: 60000});
     }
 
     async publishQuiz(quizId: string, user?: UserEntity): Promise<void>{
