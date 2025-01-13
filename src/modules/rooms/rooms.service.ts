@@ -36,7 +36,7 @@ export class RoomsService{
         private readonly roomsGatewayService: RoomsGateway,
     ){}
 
-    private async getRoomData(roomId: string): Promise<CompleteRoomEntity>{
+    async getRoomData(roomId: string): Promise<CompleteRoomEntity>{
         const room = await this.prismaService.rooms.findFirst({
             where: {
                 game_id: roomId,
@@ -51,6 +51,8 @@ export class RoomsService{
                 teams: true,
             },
         });
+        if(!room)
+            throw new NotFoundException("Room not found");
         const quiz = await this.quizService.getPublicQuiz(room.game.quiz_id);
         return this.generateCreateRoomResponse(undefined, room.room_players, room, room.teams, quiz);
     }

@@ -1,4 +1,15 @@
-import {BadRequestException, Body, Controller, HttpCode, HttpStatus, Param, Post, Req, UseGuards} from "@nestjs/common";
+import {
+    BadRequestException,
+    Body,
+    Controller,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Param,
+    Post,
+    Req,
+    UseGuards,
+} from "@nestjs/common";
 import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
 import {RoomsService} from "./rooms.service";
 import {MaybeAuthGuard} from "../users/guards/maybe-auth.guard";
@@ -10,6 +21,7 @@ import {JoinRoomDto} from "./models/dto/join-room.dto";
 import {RoomAuthGuard} from "./guards/room.guard";
 import {AuthenticatedRequestEntity} from "./models/entities/authenticated-request.entity";
 import {SubmitAnswerDto} from "../games/models/dto/submit-answer.dto";
+import {CompleteRoomEntity} from "./models/entities/complete-room.entity";
 
 @Controller("rooms")
 @ApiTags("Rooms")
@@ -108,5 +120,19 @@ export class RoomsController{
     @HttpCode(HttpStatus.NO_CONTENT)
     async answerQuestion(@Req() req: AuthenticatedRequestEntity, @Body() body: SubmitAnswerDto): Promise<void>{
         return this.roomsService.answerQuestion(req.room.id, req.player.id, body);
+    }
+
+    /**
+     * Get the current state of the room
+     * @throws {401} Unauthorized
+     * @throws {403} Forbidden
+     * @throws {404} Not Found
+     * @throws {500} Internal Server Error
+     */
+    @Get("state")
+    @UseGuards(RoomAuthGuard)
+    @ApiBearerAuth()
+    async getRoomState(@Req() req: AuthenticatedRequestEntity): Promise<CompleteRoomEntity>{
+        return this.roomsService.getRoomData(req.room.id);
     }
 }
