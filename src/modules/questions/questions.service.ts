@@ -214,6 +214,8 @@ export class QuestionsService{
                     }else{
                         questions[i].answers[j].answerContent = partialQuestions[i].answers[j].answerContent;
                     }
+                }else{
+                    questions[i].answers[j].answerContent = partialQuestions[i].answers[j].answerContent;
                 }
             }
         }
@@ -249,6 +251,8 @@ export class QuestionsService{
                 created_at: new Date(),
             })));
         }
+
+        console.log(data);
 
         await prisma.answers.createMany({
             data: data,

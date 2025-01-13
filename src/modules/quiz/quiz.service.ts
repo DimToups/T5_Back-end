@@ -21,6 +21,7 @@ import {AnswerEntity} from "../questions/models/entities/answer.entity";
 import {UpdateQuestionDto} from "./models/dto/update-question.dto";
 import {FileService} from "../file/file.service";
 import {File as MulterFile} from "@nest-lab/fastify-multer";
+import {AnswerContentDto} from "./models/dto/answer-content.dto";
 
 @Injectable()
 export class QuizService{
@@ -179,10 +180,13 @@ export class QuizService{
             throw new NotFoundException("This question doesn't exist.");
         }
 
-        let answerContent: string[] = updateQuestion.answers.map(answer => answer.answerContent.answerContent);
+        let answerContent: string[] = updateQuestion.answers.map(answer => this.getAnswerContent(answer.answerContent));
         if(updateQuestion.answers[0].type !== "TEXT"){
             // handle file upload
-            const files = updateQuestion.answers.map(answer => this.stringToFile(answer.answerContent.answerContent, this.cipherService.generateUuid(7), answer.answerContent.type));
+            const files = updateQuestion.answers.map((answer) => {
+                if(answer.answerContent instanceof AnswerContentDto)
+                    return this.stringToFile(answer.answerContent.answerContent, this.cipherService.generateUuid(7), answer.answerContent.type);
+            });
             // save files
             let filePaths: string[] = [];
             for(let i = 0; i < files.length; i++){
@@ -272,8 +276,10 @@ export class QuizService{
         for(let i = 0; i < question.answers.length; i++){
             let answer = question.answers[i];
             let answerDto = questionDto.answers[i];
-            if(answer.type !== answerDto.type
-              || answer.correct !== answerDto.correct){
+            if((answer instanceof AnswerContentDto
+              && answerDto instanceof AnswerContentDto
+              && (answer.type !== answerDto.type
+                || answer.correct !== answerDto.correct)) || answer === answerDto){
                 return false;
             }
         }
@@ -505,5 +511,11 @@ export class QuizService{
                 id: quizId,
             },
         });
+    }
+
+    private getAnswerContent(answer: AnswerContentDto | string): string{
+        if(answer instanceof AnswerContentDto)
+            return answer.answerContent;
+        return answer;
     }
 }
