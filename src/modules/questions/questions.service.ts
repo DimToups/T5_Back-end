@@ -194,11 +194,12 @@ export class QuestionsService{
 
         for(let i = 0; i < partialQuestions.length; i++){
             for(let j = 0; j < partialQuestions[i].answers.length; j++){
-                if(partialQuestions[i].answers[j].type === "IMAGE" || partialQuestions[i].answers[j].type === "SOUND"){
+                const partialAnswer = partialQuestions[i].answers[j];
+                if(partialAnswer.type === "IMAGE" || partialAnswer.type === "SOUND"){
                     // if it can't parse the answerContent assumes it's already a base64 string
-                    if(partialQuestions[i].answers[j].answerContent.startsWith("data:")){
-                        const type = partialQuestions[i].answers[j].answerContent.split(";")[0].split(":")[1];
-                        const b64Data = partialQuestions[i].answers[j].answerContent.split(",")[1];
+                    if(partialAnswer.answerContent.startsWith("data:")){
+                        const type = partialAnswer.answerContent.split(";")[0].split(":")[1];
+                        const b64Data = partialAnswer.answerContent.split(",")[1];
                         const blob = QuestionsService.base64ToBlob(b64Data, type);
                         const name = this.cipherService.generateUuid(7);
                         const multerFile: File = {
@@ -211,8 +212,23 @@ export class QuestionsService{
                             size: blob.size,
                         };
                         questions[i].answers[j].answerContent = await this.fileService.uploadFileWithoutDb(questions[i].answers[j].id, multerFile, user);
+                    }else if(!partialAnswer.answerContent.endsWith(".opus") && !partialAnswer.answerContent.endsWith(".webp")){
+                        // get the file from the db
+                        const type = partialAnswer.type === "IMAGE" ? "image/webp" : "audio/opus";
+                        const blob = QuestionsService.base64ToBlob(partialAnswer.answerContent, type);
+                        const name = this.cipherService.generateUuid(7);
+                        const multerFile: File = {
+                            fieldname: name,
+                            originalname: name,
+                            filename: name,
+                            encoding: "7bit",
+                            mimetype: blob.type,
+                            buffer: await blob.arrayBuffer().then(buffer => Buffer.from(buffer)),
+                            size: blob.size,
+                        };
+                        questions[i].answers[j].answerContent = await this.fileService.uploadFileWithoutDb(questions[i].answers[j].id, multerFile, user);
                     }else{
-                        questions[i].answers[j].answerContent = partialQuestions[i].answers[j].answerContent;
+                        questions[i].answers[j].answerContent = partialAnswer.answerContent;
                     }
                 }else{
                     questions[i].answers[j].answerContent = partialQuestions[i].answers[j].answerContent;
@@ -251,8 +267,6 @@ export class QuestionsService{
                 created_at: new Date(),
             })));
         }
-
-        console.log(data);
 
         await prisma.answers.createMany({
             data: data,
