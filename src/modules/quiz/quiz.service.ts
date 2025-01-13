@@ -181,11 +181,15 @@ export class QuizService{
         }
 
         let answerContent: string[] = updateQuestion.answers.map(answer => this.getAnswerContent(answer.answerContent));
-        if(updateQuestion.answers[0].type !== "TEXT"){
+        if(updateQuestion.answers[0].type !== "TEXT" || updateQuestion.answers[0].answerContent instanceof AnswerContentDto){
             // handle file upload
             const files = updateQuestion.answers.map((answer) => {
-                if(answer.answerContent instanceof AnswerContentDto)
+                if(answer.answerContent instanceof AnswerContentDto){
                     return this.stringToFile(answer.answerContent.answerContent, this.cipherService.generateUuid(7), answer.answerContent.type);
+                }else{
+                    const mimetype = answer.answerContent.split(";")[0].split(":")[1];
+                    return this.stringToFile(answer.answerContent, this.cipherService.generateUuid(7), mimetype);
+                }
             });
             // save files
             let filePaths: string[] = [];
