@@ -5,6 +5,7 @@ import {AuthenticatedSocketEntity} from "./models/entities/authenticated-socket.
 import {RoomAuthGuard} from "./guards/room.guard";
 import {CompleteRoomEntity} from "./models/entities/complete-room.entity";
 import {QuestionResponse} from "./models/responses/question.response";
+import {AsyncApiSub} from "nestjs-asyncapi";
 
 @WebSocketGateway({
     namespace: "rooms",
@@ -57,31 +58,65 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect{
         }
     }
 
+    @AsyncApiSub({
+        channel: "onRoomUpdate",
+        message: {
+            payload: CompleteRoomEntity,
+        },
+    })
     onRoomUpdate(roomId: string, data: CompleteRoomEntity): void{
         this.onEvent(roomId, "onRoomUpdate", data);
     }
 
+    @AsyncApiSub({
+        channel: "onRoomStart",
+        description: "Warning, payload also contain a 'endAt: Date'",
+        message: {
+            payload: CompleteRoomEntity,
+        },
+    })
     onRoomStart(roomId: string, data: CompleteRoomEntity & {endAt: Date;}){
         this.onEvent(roomId, "onRoomStart", data);
     }
 
+    @AsyncApiSub({
+        channel: "onQuestionStart",
+        message: {
+            payload: QuestionResponse,
+        },
+    })
     onQuestionStart(roomId: string, data: QuestionResponse){
         this.onEvent(roomId, "onQuestionStart", data);
     }
 
+    @AsyncApiSub({
+        channel: "onQuestionEnd",
+        description: "Warning, payload also contain a 'correctAnswer: string' and 'endAt: Date'",
+        message: {
+            payload: CompleteRoomEntity,
+        },
+    })
     onQuestionEnd(roomId: string, data: CompleteRoomEntity & {correctAnswer: string; endAt: Date;}){
         this.onEvent(roomId, "onQuestionEnd", data);
     }
 
-    /**
-     * Emit player answer
-     * @param roomId
-     * @param data who has answered
-     */
+    @AsyncApiSub({
+        channel: "onPlayerAnswer",
+        description: "Warning, payload is a string array",
+        message: {
+            payload: Array<string>,
+        },
+    })
     onPlayerAnswer(roomId: string, data: string[]){
         this.onEvent(roomId, "onPlayerAnswer", data);
     }
 
+    @AsyncApiSub({
+        channel: "onRoomEnd",
+        message: {
+            payload: CompleteRoomEntity,
+        },
+    })
     onRoomEnd(roomId: string, data: CompleteRoomEntity){
         this.onEvent(roomId, "onRoomEnd", data);
     }

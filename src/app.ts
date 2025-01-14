@@ -13,6 +13,7 @@ import {FastifyListenOptions} from "fastify/types/instance";
 import fastifyMultipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import {join} from "node:path";
+import {AsyncApiDocumentBuilder, AsyncApiModule} from "nestjs-asyncapi";
 
 dotenv.config();
 
@@ -76,6 +77,25 @@ async function loadServer(server: NestFastifyApplication){
         },
         customCss,
     });
+
+    const asyncApiOptions = new AsyncApiDocumentBuilder()
+        .setTitle("Fregna API")
+        .setDescription("Documentation for the Fregna API")
+        .setVersion(process.env.npm_package_version)
+        .setDefaultContentType("application/json")
+        .addServer("Test", {
+            url: "http://localhost:4000",
+            protocol: "http",
+            security: [{jwt: []}],
+        })
+        .addSecurity("jwt", {
+            type: "httpApiKey" as any,
+            name: "Authorization",
+            in: "header",
+        })
+        .build();
+    const asyncApiDocument = AsyncApiModule.createDocument(server, asyncApiOptions);
+    await AsyncApiModule.setup("asyncapi", server, asyncApiDocument);
 
     server.useGlobalPipes(new CustomValidationPipe());
 }
