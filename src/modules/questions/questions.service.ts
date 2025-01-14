@@ -175,17 +175,11 @@ export class QuestionsService{
                     questionSum: this.generateQuestionSum(question, user),
                     correct: answer.correct,
                     type: answer.type,
+                    answerContent: answer.type === "TEXT" ? answer.answerContent : null,
                 })),
                 userId: user?.id,
             });
         });
-
-        for(let i = 0; i < partialQuestions.length; i++)
-            for(let j = 0; j < partialQuestions[i].answers.length; j++){
-                const partialAnswer = partialQuestions[i].answers[j];
-                if(partialAnswer.type !== "IMAGE" && partialAnswer.type !== "SOUND")
-                    questions[i].answers[j].answerContent = partialQuestions[i].answers[j].answerContent;
-            }
         await prisma.questions.createMany({
             data: questions.map((question: QuestionEntity) => {
                 return {
