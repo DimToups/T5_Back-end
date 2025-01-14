@@ -36,6 +36,10 @@ export class RoomsService{
         private readonly roomsGatewayService: RoomsGateway,
     ){}
 
+    private async sleep(ms: number): Promise<void>{
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     async getRoomData(roomId: string): Promise<CompleteRoomEntity>{
         const room = await this.prismaService.rooms.findFirst({
             where: {
@@ -108,18 +112,21 @@ export class RoomsService{
                 game: true,
             },
         });
-        let roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.create({
+        const roomPlayer = await this.prismaService.roomPlayers.create({
             data: {
                 id: this.cipherService.generateUuid(7),
-                room_id: room.game_id,
-                user_id: user ? user.id : null,
                 username: createRoomDto.playerName,
                 owner: true,
-            },
-        });
-        roomPlayer = await this.prismaService.roomPlayers.findFirst({
-            where: {
-                id: roomPlayer.id,
+                room: {
+                    connect: {
+                        game_id: room.game_id,
+                    },
+                },
+                user: {
+                    connect: {
+                        id: user ? user.id : null,
+                    },
+                },
             },
             include: {
                 user: true,
@@ -161,18 +168,21 @@ export class RoomsService{
                 room_id: room.game_id,
             },
         });
-        let roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.create({
+        const roomPlayer = await this.prismaService.roomPlayers.create({
             data: {
                 id: this.cipherService.generateUuid(7),
-                room_id: room.game_id,
-                user_id: user ? user.id : null,
                 username: createRoomDto.playerName,
                 owner: true,
-            },
-        });
-        roomPlayer = await this.prismaService.roomPlayers.findFirst({
-            where: {
-                id: roomPlayer.id,
+                room: {
+                    connect: {
+                        game_id: room.game_id,
+                    },
+                },
+                user: {
+                    connect: {
+                        id: user ? user.id : null,
+                    },
+                },
             },
             include: {
                 user: true,
@@ -242,109 +252,8 @@ export class RoomsService{
             teams: response.teams,
         });
         if(room.game.mode === GameModes.MULTIPLAYER && roomPlayers.length === room.max_players)
-            this.startedRooms.push(this.startScrumRoom(exportedResponse));
+            this.startedRooms.push(this.runRoom(exportedResponse));
         return response;
-    }
-
-    private async sleep(ms: number): Promise<void>{
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    private async startScrumRoom(roomData: CompleteRoomEntity): Promise<void>{
-        roomData.room.startedAt = new Date();
-        await this.prismaService.rooms.update({
-            where: {
-                game_id: roomData.room.id,
-            },
-            data: {
-                started_at: roomData.room.startedAt,
-            },
-        });
-        this.roomsGatewayService.onRoomStart(roomData.room.id, {
-            ...roomData,
-            endAt: new Date(Date.now() + 5000), // 5s
-        });
-        await this.sleep(5000); // 5s
-        const question: PublicQuestionEntity = await this.gamesService.getCurrentQuestion(roomData.room.id);
-        this.roomsGatewayService.onQuestionStart(roomData.room.id, {
-            question,
-        } as QuestionResponse);
-    }
-
-    private async startTeamRoom(roomData: CompleteRoomEntity): Promise<void>{
-        roomData.room.startedAt = new Date();
-        await this.prismaService.rooms.update({
-            where: {
-                game_id: roomData.room.id,
-            },
-            data: {
-                started_at: roomData.room.startedAt,
-            },
-        });
-        this.roomsGatewayService.onRoomStart(roomData.room.id, {
-            ...roomData,
-            endAt: new Date(Date.now() + 5000), // 5s
-        });
-        await this.sleep(5000); // 5s
-        let questionDuration: number;
-        switch (roomData.room.gameMode){
-            case GameModes.TEAM_EASY:
-                questionDuration = 30000; // 30s
-                break;
-            case GameModes.TEAM_MEDIUM:
-                questionDuration = 15000; // 15s
-                break;
-            case GameModes.TEAM_HARD:
-                questionDuration = 5000; // 5s
-                break;
-        }
-        const questionCount: number = await this.gamesService.getQuestionCount(roomData.room.id);
-        for(let i: number = 0; i < questionCount; i++){
-            const question: PublicQuestionEntity = await this.gamesService.getCurrentQuestion(roomData.room.id);
-            this.roomsGatewayService.onQuestionStart(roomData.room.id, {
-                question,
-                endAt: new Date(Date.now() + questionDuration),
-            } as QuestionResponse);
-            const correctAnswer = await this.gamesService.getCorrectAnswer(question.sum);
-            await this.sleep(questionDuration);
-            this.roomsGatewayService.onQuestionEnd(roomData.room.id, {
-                ...await this.getRoomData(roomData.room.id),
-                correctAnswer,
-                endAt: new Date(Date.now() + 5000), // 5s
-            });
-            await this.sleep(5000); // 5s
-            await this.gamesService.nextQuestion(roomData.room.id);
-        }
-        this.roomsGatewayService.onRoomEnd(roomData.room.id, await this.getRoomData(roomData.room.id));
-    }
-
-    async startRoom(roomId: string, playerId: string){
-        const room = await this.prismaService.rooms.findFirst({
-            where: {
-                game_id: roomId,
-            },
-            include: {
-                game: true,
-            },
-        });
-        if(!room)
-            throw new NotFoundException("Room not found");
-        if(room.started_at)
-            throw new BadRequestException("Room has already started");
-        const roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.findFirst({
-            where: {
-                id: playerId,
-                room_id: roomId,
-            },
-        });
-        if(!roomPlayer)
-            throw new NotFoundException("Room player not found");
-        if(!roomPlayer.owner)
-            throw new ForbiddenException("Room player is not room owner");
-        if(room.game.mode === GameModes.MULTIPLAYER)
-            this.startedRooms.push(this.startScrumRoom(await this.getRoomData(roomId)));
-        else
-            this.startedRooms.push(this.startTeamRoom(await this.getRoomData(roomId)));
     }
 
     async joinTeam(roomId: string, playerId: string, teamId: string){
@@ -384,6 +293,82 @@ export class RoomsService{
         this.roomsGatewayService.onRoomUpdate(roomId, await this.getRoomData(roomId));
     }
 
+    private async runRoom(roomData: CompleteRoomEntity): Promise<void>{
+        roomData.room.startedAt = new Date();
+        await this.prismaService.rooms.update({
+            where: {
+                game_id: roomData.room.id,
+            },
+            data: {
+                started_at: roomData.room.startedAt,
+            },
+        });
+        await this.sleep(5000); // Wait to last client to connect for scrum mode
+        this.roomsGatewayService.onRoomStart(roomData.room.id, {
+            ...roomData,
+            endAt: new Date(Date.now() + 5000), // 5s
+        });
+        await this.sleep(5000); // 5s
+        let questionDuration: number;
+        switch (roomData.room.gameMode){
+            case GameModes.MULTIPLAYER:
+            case GameModes.TEAM_EASY:
+                questionDuration = 30000; // 30s
+                break;
+            case GameModes.TEAM_MEDIUM:
+                questionDuration = 15000; // 15s
+                break;
+            case GameModes.TEAM_HARD:
+                questionDuration = 5000; // 5s
+                break;
+        }
+        const questionCount: number = await this.gamesService.getQuestionCount(roomData.room.id);
+        for(let i: number = 0; i < questionCount; i++){
+            const question: PublicQuestionEntity = await this.gamesService.getCurrentQuestion(roomData.room.id);
+            this.roomsGatewayService.onQuestionStart(roomData.room.id, {
+                question,
+                endAt: new Date(Date.now() + questionDuration),
+            } as QuestionResponse);
+            const correctAnswer = await this.gamesService.getCorrectAnswer(question.sum);
+            // TODO: If required, add lower sleep and check for player answers to end the question in scrum mode
+            await this.sleep(questionDuration);
+            this.roomsGatewayService.onQuestionEnd(roomData.room.id, {
+                ...await this.getRoomData(roomData.room.id),
+                correctAnswer,
+                endAt: new Date(Date.now() + 5000), // 5s
+            });
+            await this.sleep(5000); // 5s
+            await this.gamesService.nextQuestion(roomData.room.id);
+        }
+        this.roomsGatewayService.onRoomEnd(roomData.room.id, await this.getRoomData(roomData.room.id));
+    }
+
+    async startRoom(roomId: string, playerId: string){
+        const room = await this.prismaService.rooms.findFirst({
+            where: {
+                game_id: roomId,
+            },
+            include: {
+                game: true,
+            },
+        });
+        if(!room)
+            throw new NotFoundException("Room not found");
+        if(room.started_at)
+            throw new BadRequestException("Room has already started");
+        const roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.findFirst({
+            where: {
+                id: playerId,
+                room_id: roomId,
+            },
+        });
+        if(!roomPlayer)
+            throw new NotFoundException("Room player not found");
+        if(!roomPlayer.owner)
+            throw new ForbiddenException("Room player is not room owner");
+        this.startedRooms.push(this.runRoom(await this.getRoomData(roomId)));
+    }
+
     async answerQuestion(roomId: string, playerId: string, submitAnswerDto: SubmitAnswerDto): Promise<void>{
         const room = await this.prismaService.rooms.findFirst({
             where: {
@@ -419,7 +404,6 @@ export class RoomsService{
         this.playerAnswers.get(roomId)[currentQuestion.position] = currentQuestionAnswers;
         // Check answer and calculate score
         const isAnswerCorrect = await this.gamesService.isAnswerCorrect(currentQuestion.sum, submitAnswerDto.answer);
-        const correctAnswer = await this.gamesService.getCorrectAnswer(currentQuestion.sum);
         if(isAnswerCorrect)
             await this.prismaService.roomPlayers.update({
                 where: {
@@ -431,40 +415,7 @@ export class RoomsService{
                     },
                 },
             });
-        // Trigger specific logic for scrum mode
-        const isAllPlayersAnswered = this.playerAnswers.get(roomId)[currentQuestion.position].length === roomPlayers.length;
         // Trigger update for clients
         this.roomsGatewayService.onPlayerAnswer(roomId, this.playerAnswers.get(roomId)[currentQuestion.position]);
-        await this.endCheck(roomId, isAnswerCorrect, isAllPlayersAnswered, correctAnswer);
-    }
-
-    private async endCheck(roomId: string, isAnswerCorrect: boolean, isAllPlayersAnswered: boolean, correctAnswer: string): Promise<void>{
-        if(!isAnswerCorrect && !isAllPlayersAnswered)
-            return;
-        this.roomsGatewayService.onQuestionEnd(roomId, {
-            ...await this.getRoomData(roomId),
-            correctAnswer,
-            endAt: new Date(Date.now() + 5000), // 5s
-        });
-        await this.sleep(5000); // 5s
-        // Don't trigger next question if there is no more questions
-        const questionCount: number = await this.gamesService.getQuestionCount(roomId);
-        const currentQuestion = await this.gamesService.getCurrentQuestion(roomId);
-        if(currentQuestion.position === questionCount){
-            this.roomsGatewayService.onRoomEnd(roomId, await this.getRoomData(roomId));
-            return;
-        }
-        await this.gamesService.nextQuestion(roomId);
-        let question: PublicQuestionEntity;
-        try{
-            question = await this.gamesService.getCurrentQuestion(roomId);
-        }catch(err: any){
-            // end of quiz
-            this.roomsGatewayService.onRoomEnd(roomId, await this.getRoomData(roomId));
-            return;
-        }
-        this.roomsGatewayService.onQuestionStart(roomId, {
-            question,
-        } as QuestionResponse);
     }
 }

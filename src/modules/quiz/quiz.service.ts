@@ -20,7 +20,6 @@ import {UserQuizEntity} from "./models/entity/user-quiz.entity";
 import {AnswerEntity} from "../questions/models/entities/answer.entity";
 import {UpdateQuestionDto} from "./models/dto/update-question.dto";
 import {FileService} from "../file/file.service";
-import {File as MulterFile} from "@nest-lab/fastify-multer";
 import {AnswerContentDto} from "./models/dto/answer-content.dto";
 
 @Injectable()
@@ -31,16 +30,6 @@ export class QuizService{
         private readonly questionsService: QuestionsService,
         private readonly fileService: FileService,
     ){}
-
-    private stringToFile(base64String: string, fileName: string, mimeType: string): File{
-        const byteString = atob(base64String.split(",")[1]);
-        const arrayBuffer = new Uint8Array(byteString.length);
-        for(let i = 0; i < byteString.length; i++){
-            arrayBuffer[i] = byteString.charCodeAt(i);
-        }
-        const blob = new Blob([arrayBuffer], {type: mimeType});
-        return new File([blob], fileName, {type: mimeType});
-    };
 
     async createQuiz(title: string, description?: string, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<QuizEntity>{
         const quizId = this.cipherService.generateUuid(7);
@@ -127,14 +116,6 @@ export class QuizService{
                 userId: question.user_id,
             };
         });
-        for(const question of questions){
-            for(const answer of question.answers){
-                if(answer.type === "IMAGE" || answer.type === "SOUND"){
-                    const file = await this.fileService.getFile(answer.id);
-                    answer.answerContent = file.toString("base64");
-                }
-            }
-        }
 
         return new QuizEntity({
             id: quiz.id,
@@ -165,64 +146,28 @@ export class QuizService{
             },
         });
 
-        if(!quiz){
+        if(!quiz)
             throw new NotFoundException("This quiz doesn't exist.");
-        }
-        if(!user && quiz.user_id){
+        if(!user && quiz.user_id)
             throw new UnauthorizedException("You're not allowed to access this quiz.");
-        }
-        if(user && quiz.user_id !== user.id){
+        if(user && quiz.user_id !== user.id)
             throw new ForbiddenException("You're not allowed to access this quiz.");
-        }
 
         const question = quiz.quiz_questions.find(question => question.question_id === questionId).question;
-        if(!question){
+        if(!question)
             throw new NotFoundException("This question doesn't exist.");
-        }
-
-        let answerContent: string[] = updateQuestion.answers.map(answer => this.getAnswerContent(answer.answerContent));
-        if(updateQuestion.answers[0].type !== "TEXT" || updateQuestion.answers[0].answerContent instanceof AnswerContentDto){
-            // handle file upload
-            const files = updateQuestion.answers.map((answer) => {
-                if(answer.answerContent instanceof AnswerContentDto){
-                    return this.stringToFile(answer.answerContent.answerContent, this.cipherService.generateUuid(7), answer.answerContent.type);
-                }else{
-                    let mimetype = answer.type === "IMAGE" ? "image/webp" : "audio/opus";
-                    if(answer.answerContent.includes("data")){
-                        mimetype = answer.answerContent.split(";")[0].split(":")[1];
-                    }
-                    return this.stringToFile(answer.answerContent, this.cipherService.generateUuid(7), mimetype);
-                }
-            });
-            // save files
-            let filePaths: string[] = [];
-            for(let i = 0; i < files.length; i++){
-                const file = files[i];
-                const multerFile: MulterFile = {
-                    fieldname: file.name,
-                    originalname: file.name,
-                    filename: file.name,
-                    encoding: "7bit",
-                    mimetype: file.type,
-                    buffer: await file.arrayBuffer().then(buffer => Buffer.from(buffer)),
-                    size: file.size,
-                };
-                filePaths.push(await this.fileService.uploadFile(question.answers[i].id, multerFile, user));
-            }
-            answerContent = filePaths;
-        }
 
         const questionEntity = new QuestionEntity({
             sum: question.sum,
             question: question.question,
             difficulty: question.difficulty,
             category: question.category,
-            answers: question.answers.map((answer, index) => new AnswerEntity({
+            answers: question.answers.map(answer => new AnswerEntity({
                 id: answer.id,
                 questionSum: answer.question_sum,
                 correct: answer.correct,
                 type: answer.type,
-                answerContent: answerContent[index],
+                answerContent: answer.answer_content,
             })),
             userId: question.user_id,
         });
@@ -239,10 +184,10 @@ export class QuizService{
                 difficulty: updateQuestion.difficulty,
                 category: updateQuestion.category,
                 answers: {
-                    create: updateQuestion.answers.map((answer, index) => ({
+                    create: question.answers.map(answer => ({
                         type: answer.type,
                         correct: answer.correct,
-                        answer_content: answerContent[index],
+                        answer_content: answer.answer_content,
                         question_sum: question.sum,
                         id: this.cipherService.generateUuid(7),
                     })),
@@ -518,11 +463,5 @@ export class QuizService{
                 id: quizId,
             },
         });
-    }
-
-    private getAnswerContent(answer: AnswerContentDto | string): string{
-        if(answer instanceof AnswerContentDto)
-            return answer.answerContent;
-        return answer;
     }
 }

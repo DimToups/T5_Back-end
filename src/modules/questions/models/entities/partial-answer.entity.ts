@@ -8,5 +8,5 @@ export class PartialAnswerEntity{
     @ApiProperty({enum: AnswerType, required: true})
     type: AnswerType;
 
-    answerContent: string;
+    answerContent?: string;
 }
