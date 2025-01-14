@@ -164,7 +164,7 @@ model Answers {
   question       Questions  @relation(fields: [question_sum], references: [sum], onDelete: Cascade)
   correct        Boolean
   type           AnswerType
-  answer_content String // text or {image, image} path
+  answer_content String? // text or {image, audio} path
   created_at     DateTime   @default(now())
 
   @@map("answers")

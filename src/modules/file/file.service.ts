@@ -22,57 +22,17 @@ export class FileService{
         private readonly cipherService: CipherService,
     ){}
 
-    async getFile(answerId: string){
-        const answer = await this.prismaService.answers.findUnique({
-            where: {
-                id: answerId,
-            },
-        });
-        if(!answer){
-            throw new NotFoundException("Answer not found");
-        }
-        // get file from filesystem
-        const path = join(process.cwd(), "public_answers", answer.answer_content);
-        return fs.readFileSync(path);
-    }
-
-    async uploadFileWithoutDb(answerId: string, file: File, user: UserEntity): Promise<string>{
-        if(!(await this.checkFile(answerId, file, user))){
-            throw new BadRequestException("File type not supported");
-        }
-
-        if(file.mimetype.split("/")[0] === "image"){
-            let image: Buffer<ArrayBufferLike>;
-            await sharp(file.buffer).metadata().then((result) => {
-                if(result.format === "webp" && result.width <= 1024 && result.height <= 1024){
-                    image = file.buffer;
-                }
-            });
-            if(!image){
-                image = await this.convertImage(await this.resizeImage(file.buffer, 1024, 1024));
-            }
-            return this.saveFileWithoutDb(answerId, image, "webp");
-        }
-        if(file.mimetype.split("/")[0] === "audio"){
-            const audio = await this.convertAudio(file.buffer);
-            return this.saveFileWithoutDb(answerId, audio, "opus");
-        }
-        throw new BadRequestException("File type not supported");
-    }
-
     async uploadFile(answerId: string, file: File, user: UserEntity): Promise<string>{
-        if(!(await this.checkFile(answerId, file, user))){
+        if(!(await this.checkFile(answerId, file, user)))
             throw new BadRequestException("File type not supported");
-        }
 
         const answer = await this.prismaService.answers.findUnique({
             where: {
                 id: answerId,
             },
         });
-        if(!answer){
+        if(!answer)
             throw new NotFoundException("Answer not found");
-        }
         const question = await this.prismaService.questions.findUnique({
             where: {
                 sum: answer.question_sum,
@@ -101,19 +61,15 @@ export class FileService{
     }
 
     private async checkFile(answerId: string, file: File, user: UserEntity): Promise<boolean>{
-        if(!file.buffer){
+        if(!file.buffer)
             throw new BadRequestException("No file uploaded");
-        }
-        if(!user){
+        if(!user)
             throw new UnauthorizedException("You must be connected to upload a file.");
-        }
 
-        if(file.mimetype.split("/")[0] === "image"){
+        if(file.mimetype.split("/")[0] === "image")
             return true;
-        }
-        if(file.mimetype.split("/")[0] === "audio"){
+        if(file.mimetype.split("/")[0] === "audio")
             return true;
-        }
         throw new BadRequestException("File type not supported");
     }
 

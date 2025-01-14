@@ -9,7 +9,6 @@ import {UserEntity} from "../users/models/entities/user.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 import {AnswerEntity} from "./models/entities/answer.entity";
 import {FileService} from "../file/file.service";
-import {File} from "@nest-lab/fastify-multer";
 
 @Injectable()
 export class QuestionsService{
@@ -20,16 +19,6 @@ export class QuestionsService{
         private readonly cipherService: CipherService,
         private readonly fileService: FileService,
     ){}
-
-    private static base64ToBlob(base64Data: string, contentType: string): Blob{
-        contentType = contentType || "";
-        const byteCharacters = atob(base64Data);
-        const byteArrays = new Uint8Array(byteCharacters.length);
-        for(let i = 0; i < byteCharacters.length; i++){
-            byteArrays[i] = byteCharacters.charCodeAt(i);
-        }
-        return new Blob([byteArrays], {type: contentType});
-    }
 
     private generateQuestionSum(question: PartialQuestionEntity, user?: UserEntity): string{
         const infos: string[] = [
@@ -182,59 +171,21 @@ export class QuestionsService{
                 difficulty: question.difficulty,
                 category: question.category,
                 answers: question.answers.map(answer => new AnswerEntity({
+                    id: this.cipherService.generateUuid(7),
                     questionSum: this.generateQuestionSum(question, user),
-                    answerContent: "",
                     correct: answer.correct,
                     type: answer.type,
-                    id: this.cipherService.generateUuid(7),
                 })),
                 userId: user?.id,
             });
         });
 
-        for(let i = 0; i < partialQuestions.length; i++){
+        for(let i = 0; i < partialQuestions.length; i++)
             for(let j = 0; j < partialQuestions[i].answers.length; j++){
                 const partialAnswer = partialQuestions[i].answers[j];
-                if(partialAnswer.type === "IMAGE" || partialAnswer.type === "SOUND"){
-                    // if it can't parse the answerContent assumes it's already a base64 string
-                    if(partialAnswer.answerContent.startsWith("data:")){
-                        const type = partialAnswer.answerContent.split(";")[0].split(":")[1];
-                        const b64Data = partialAnswer.answerContent.split(",")[1];
-                        const blob = QuestionsService.base64ToBlob(b64Data, type);
-                        const name = this.cipherService.generateUuid(7);
-                        const multerFile: File = {
-                            fieldname: name,
-                            originalname: name,
-                            filename: name,
-                            encoding: "7bit",
-                            mimetype: blob.type,
-                            buffer: await blob.arrayBuffer().then(buffer => Buffer.from(buffer)),
-                            size: blob.size,
-                        };
-                        questions[i].answers[j].answerContent = await this.fileService.uploadFileWithoutDb(questions[i].answers[j].id, multerFile, user);
-                    }else if(!partialAnswer.answerContent.endsWith(".opus") && !partialAnswer.answerContent.endsWith(".webp")){
-                        // get the file from the db
-                        const type = partialAnswer.type === "IMAGE" ? "image/webp" : "audio/opus";
-                        const blob = QuestionsService.base64ToBlob(partialAnswer.answerContent, type);
-                        const name = this.cipherService.generateUuid(7);
-                        const multerFile: File = {
-                            fieldname: name,
-                            originalname: name,
-                            filename: name,
-                            encoding: "7bit",
-                            mimetype: blob.type,
-                            buffer: await blob.arrayBuffer().then(buffer => Buffer.from(buffer)),
-                            size: blob.size,
-                        };
-                        questions[i].answers[j].answerContent = await this.fileService.uploadFileWithoutDb(questions[i].answers[j].id, multerFile, user);
-                    }else{
-                        questions[i].answers[j].answerContent = partialAnswer.answerContent;
-                    }
-                }else{
+                if(partialAnswer.type !== "IMAGE" && partialAnswer.type !== "SOUND")
                     questions[i].answers[j].answerContent = partialQuestions[i].answers[j].answerContent;
-                }
             }
-        }
         await prisma.questions.createMany({
             data: questions.map((question: QuestionEntity) => {
                 return {
@@ -256,7 +207,7 @@ export class QuestionsService{
             },
         });
 
-        const data = [];
+        const data: any[] = [];
         for(const question of questions){
             data.push(...question.answers.map(answer => ({
                 question_sum: question.sum,
