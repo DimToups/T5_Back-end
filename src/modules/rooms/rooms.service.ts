@@ -112,18 +112,21 @@ export class RoomsService{
                 game: true,
             },
         });
-        let roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.create({
+        const roomPlayer = await this.prismaService.roomPlayers.create({
             data: {
                 id: this.cipherService.generateUuid(7),
-                room_id: room.game_id,
-                user_id: user ? user.id : null,
                 username: createRoomDto.playerName,
                 owner: true,
-            },
-        });
-        roomPlayer = await this.prismaService.roomPlayers.findFirst({
-            where: {
-                id: roomPlayer.id,
+                room: {
+                    connect: {
+                        game_id: room.game_id,
+                    },
+                },
+                user: {
+                    connect: {
+                        id: user ? user.id : null,
+                    },
+                },
             },
             include: {
                 user: true,
@@ -165,18 +168,21 @@ export class RoomsService{
                 room_id: room.game_id,
             },
         });
-        let roomPlayer: RoomPlayers = await this.prismaService.roomPlayers.create({
+        const roomPlayer = await this.prismaService.roomPlayers.create({
             data: {
                 id: this.cipherService.generateUuid(7),
-                room_id: room.game_id,
-                user_id: user ? user.id : null,
                 username: createRoomDto.playerName,
                 owner: true,
-            },
-        });
-        roomPlayer = await this.prismaService.roomPlayers.findFirst({
-            where: {
-                id: roomPlayer.id,
+                room: {
+                    connect: {
+                        game_id: room.game_id,
+                    },
+                },
+                user: {
+                    connect: {
+                        id: user ? user.id : null,
+                    },
+                },
             },
             include: {
                 user: true,

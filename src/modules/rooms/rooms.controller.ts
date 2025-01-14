@@ -51,7 +51,7 @@ export class RoomsController{
           && body.gameMode !== GameModes.TEAM_HARD)
             throw new BadRequestException("Invalid game mode for room creation");
         if(body.gameMode === GameModes.MULTIPLAYER)
-            return this.roomsService.createScrumRoom(body);
+            return this.roomsService.createScrumRoom(body, req.user);
         return this.roomsService.createTeamRoom(body, req.user);
     }
 
