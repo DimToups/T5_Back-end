@@ -117,16 +117,8 @@ export class RoomsService{
                 id: this.cipherService.generateUuid(7),
                 username: createRoomDto.playerName,
                 owner: true,
-                room: {
-                    connect: {
-                        game_id: room.game_id,
-                    },
-                },
-                user: {
-                    connect: {
-                        id: user ? user.id : null,
-                    },
-                },
+                room_id: room.game_id,
+                user_id: user ? user.id : null,
             },
             include: {
                 user: true,
@@ -173,16 +165,8 @@ export class RoomsService{
                 id: this.cipherService.generateUuid(7),
                 username: createRoomDto.playerName,
                 owner: true,
-                room: {
-                    connect: {
-                        game_id: room.game_id,
-                    },
-                },
-                user: {
-                    connect: {
-                        id: user ? user.id : null,
-                    },
-                },
+                room_id: room.game_id,
+                user_id: user ? user.id : null,
             },
             include: {
                 user: true,
