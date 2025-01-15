@@ -85,7 +85,11 @@ export class FileService{
             return path;
         }
         if(!fs.existsSync(path)){
-            const parentPath = path.substring(0, path.lastIndexOf("/"));
+            console.log(path);
+            let parentPath = path.substring(0, path.lastIndexOf("/"));
+            if(parentPath === "")
+                parentPath = path.substring(0, path.lastIndexOf("\\"));
+            console.log(parentPath);
             fs.mkdirSync(parentPath, {recursive: true});
         }
         fs.writeFileSync(path, file);
