@@ -1,4 +1,4 @@
-import {BadRequestException, Injectable, InternalServerErrorException} from "@nestjs/common";
+import {BadRequestException, Injectable, InternalServerErrorException, Logger} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {AnswerType, Categories, Difficulties, PrismaClient} from "@prisma/client";
 import {QuestionEntity} from "./models/entities/question.entity";
@@ -8,16 +8,18 @@ import {PartialQuestionEntity} from "./models/entities/partial-question.entity";
 import {UserEntity} from "../users/models/entities/user.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 import {AnswerEntity} from "./models/entities/answer.entity";
-import {FileService} from "../file/file.service";
+import {ConfigService} from "@nestjs/config";
+import {GenerateAnswersResponse} from "./models/responses/generate-answers.response";
 
 @Injectable()
 export class QuestionsService{
     private static readonly BASE_URL = "https://opentdb.com";
+    private readonly logger: Logger = new Logger(QuestionsService.name);
 
     constructor(
         private readonly prismaService: PrismaService,
         private readonly cipherService: CipherService,
-        private readonly fileService: FileService,
+        private readonly configService: ConfigService,
     ){}
 
     private generateQuestionSum(question: PartialQuestionEntity, user?: UserEntity): string{
@@ -218,5 +220,41 @@ export class QuestionsService{
         });
 
         return questions;
+    }
+
+    async generateAnswers(question: string): Promise<GenerateAnswersResponse>{
+        const apiUrl = this.configService.get<string>("AI_API_URL");
+        const apiKey = this.configService.get<string>("AI_API_KEY");
+        const prompt = `Génère des réponses pour la question suivante : "${question}".
+Ces réponses seront donné au format Json suivant : {"correctAnswer": "Réponse correcte", "incorrectAnswers": ["Réponse incorrecte 1", "Réponse incorrecte 2", "Réponse incorrecte 3"]}.
+Répond avec uniquement le Json et dans la langue de la question posée.`;
+        const response = await fetch(`${apiUrl}/v1/chat/completions`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Cookie": `token=${apiKey}`,
+            },
+            body: JSON.stringify({
+                model: "llama-3.2-3b-instruct:q4_k_m",
+                messages: [
+                    {
+                        role: "user",
+                        content: prompt,
+                        image: "",
+                    },
+                ],
+                stream: false,
+                max_tokens: 100,
+            }),
+        });
+        const data = await response.json();
+        if(data.error)
+            throw new BadRequestException(data.error);
+        try{
+            return JSON.parse(data.choices[0].message.content);
+        }catch(_){
+            this.logger.debug(data.choices[0].message.content);
+            throw new BadRequestException("Could not parse answer");
+        }
     }
 }

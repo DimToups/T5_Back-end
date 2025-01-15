@@ -8,6 +8,9 @@ import {GetQuestionsDto} from "./models/dto/get-questions.dto";
 import {MaybeAuthenticatedRequest} from "../users/models/models/maybe-authenticated-request";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 import {FastifyReply} from "fastify";
+import {GenerateAnswersDto} from "./models/dto/generate-answers.dto";
+import {AuthGuard} from "../users/guards/auth.guard";
+import {GenerateAnswersResponse} from "./models/responses/generate-answers.response";
 
 @Controller("questions")
 @ApiTags("Questions")
@@ -42,5 +45,13 @@ export class QuestionsController{
         res.header("X-Skip", questions.skip.toString());
         res.header("access-control-expose-headers", "X-Total-Count, X-Take, X-Skip");
         return questions.data;
+    }
+
+    @Post("answers/generate")
+    @UseGuards(AuthGuard)
+    @HttpCode(HttpStatus.OK)
+    @ApiBearerAuth()
+    async generateAnswers(@Body() body: GenerateAnswersDto): Promise<GenerateAnswersResponse>{
+        return this.questionsService.generateAnswers(body.question);
     }
 }
