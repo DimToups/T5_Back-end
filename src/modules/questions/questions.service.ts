@@ -207,7 +207,7 @@ export class QuestionsService{
                 question_sum: question.sum,
                 correct: answer.correct,
                 type: answer.type,
-                id: this.cipherService.generateUuid(7),
+                id: answer.id,
                 answer_content: answer.answerContent,
                 created_at: new Date(),
             })));
