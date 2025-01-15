@@ -55,7 +55,7 @@ export class FileService{
         }
         if(file.mimetype.split("/")[0] === "audio"){
             const audio = await this.convertAudio(file.buffer);
-            return this.saveFile(answerId, audio, "opus");
+            return this.saveFile(answerId, audio, "mp3");
         }
         throw new BadRequestException("File type not supported");
     }
@@ -128,11 +128,11 @@ export class FileService{
             let outputBuffer = Buffer.alloc(0);
 
             ffmpeg(inputStream)
-                .audioCodec("libopus")
+                .audioCodec("libmp3lame")
                 .audioBitrate("64k")
                 .audioChannels(2)
                 .audioFrequency(48000)
-                .format("opus")
+                .format("mp3")
                 .on("end", () => resolve(outputBuffer))
                 .on("error", err => reject(err))
                 .pipe()
