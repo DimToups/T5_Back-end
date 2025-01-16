@@ -321,7 +321,7 @@ export class RoomsService{
             const start = Date.now();
             while(Date.now() - start < questionDuration){
                 // Check if all players have answered
-                this.logger.debug(`${this.playerAnswers.get(roomData.room.id)[i]?.length || 0} players answered for room ${roomData.room.id} (question ${i})`);
+                this.logger.debug(`${this.playerAnswers.get(roomData.room.id)[i]?.length || 0}/${roomData.players.length} players answered for room ${roomData.room.id} (question ${i})`);
                 if(this.playerAnswers.get(roomData.room.id)[i]?.length || 0 === roomData.players.length){
                     this.logger.debug(`All players answered for room ${roomData.room.id}, starting next question`);
                     break;
