@@ -40,7 +40,7 @@ export class RoomsService{
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async getRoomData(roomId: string): Promise<CompleteRoomEntity>{
+    async getRoomData(roomId: string, roomPlayer?: RoomPlayerEntity): Promise<CompleteRoomEntity>{
         const room = await this.prismaService.rooms.findFirst({
             where: {
                 game_id: roomId,
@@ -58,12 +58,13 @@ export class RoomsService{
         if(!room)
             throw new NotFoundException("Room not found");
         const quiz = await this.quizService.getPublicQuiz(room.game.quiz_id);
-        return this.generateCreateRoomResponse(undefined, room.room_players, room, room.teams, quiz);
+        return this.generateCreateRoomResponse(undefined, room.room_players, room, room.teams, quiz, roomPlayer);
     }
 
-    private generateCreateRoomResponse(jwt: string, roomPlayers: any[], room: any, roomTeams: Teams[], quiz: PublicQuizEntity): CreateRoomResponse{
+    private generateCreateRoomResponse(jwt: string, roomPlayers: any[], room: any, roomTeams: Teams[], quiz: PublicQuizEntity, roomPlayer?: RoomPlayerEntity): CreateRoomResponse{
         return {
             token: jwt,
+            selfId: roomPlayer ? roomPlayer.id : undefined,
             players: roomPlayers.map((player): RoomPlayerEntity => ({
                 id: player.id,
                 username: player.username,
