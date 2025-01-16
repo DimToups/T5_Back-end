@@ -13,10 +13,8 @@ import {GameEntity} from "./models/entities/game.entity";
 import {PublicQuestionEntity} from "./models/entities/public-question.entity";
 import {SubmitAnswerResponse} from "./models/responses/submit-answer.response";
 import {QuizService} from "../quiz/quiz.service";
-import {QuestionsService} from "../questions/questions.service";
 import {QuizEntity} from "../quiz/models/entity/quiz.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
-import {FileService} from "../file/file.service";
 
 @Injectable()
 export class GamesService{
@@ -24,8 +22,6 @@ export class GamesService{
         private readonly prismaService: PrismaService,
         private readonly cipherService: CipherService,
         private readonly quizService: QuizService,
-        private readonly questionsService: QuestionsService,
-        private readonly fileService: FileService,
     ){}
 
     private generateQuizCode(): string{
