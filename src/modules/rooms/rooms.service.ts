@@ -388,13 +388,13 @@ export class RoomsService{
             throw new NotFoundException("Room player not found");
         const currentQuestion = await this.gamesService.getCurrentQuestion(roomId);
         // Check if player has already answered and store its answer state to memory
-        let currentQuestionAnswers: string[] = this.playerAnswers.get(roomId)[currentQuestion.position] || [];
+        let currentQuestionAnswers: string[] = this.playerAnswers.get(roomId)[currentQuestion.position - 1] || [];
         if(currentQuestionAnswers.includes(playerId))
             throw new BadRequestException("Player has already answered");
         currentQuestionAnswers.push(playerId);
         this.playerAnswers.set(roomId, {
             ...this.playerAnswers.get(roomId),
-            [currentQuestion.position]: currentQuestionAnswers,
+            [currentQuestion.position - 1]: currentQuestionAnswers,
         });
         // Check answer and calculate score
         const isAnswerCorrect = await this.gamesService.isAnswerCorrect(currentQuestion.sum, submitAnswerDto.answer);
@@ -414,7 +414,7 @@ export class RoomsService{
             this.logger.debug("Correct answer found, complete player answers to trigger next question");
             this.playerAnswers.set(roomId, {
                 ...this.playerAnswers.get(roomId),
-                [currentQuestion.position]: roomPlayers.map(player => player.id),
+                [currentQuestion.position - 1]: roomPlayers.map(player => player.id),
             });
         }
         // Trigger update for clients
