@@ -1,18 +1,22 @@
-FROM node:21-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
+RUN apk add --no-cache openssl ffmpeg
+
 COPY package*.json pnpm-lock.yaml ./
 COPY tsconfig.json ./
-COPY prisma ./prisma/
 
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+RUN corepack enable && pnpm install --frozen-lockfile
+
+COPY prisma ./prisma/
+RUN pnpm dlx prisma generate
 
 COPY . .
 
 ENV NODE_ENV=production
 
-RUN pnpm dlx prisma generate && pnpm run build
+RUN pnpm run build
 
 EXPOSE 4000
 

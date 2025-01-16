@@ -8,11 +8,13 @@ import {AuthGuard} from "../users/guards/auth.guard";
 import {AuthenticatedRequest} from "../users/models/models/authenticated-request";
 import {PublicQuestionEntity} from "./models/entities/public-question.entity";
 import {SubmitAnswerDto} from "./models/dto/submit-answer.dto";
-import {SubmitAnswerResponse} from "./models/submit-answer.response";
+import {SubmitAnswerResponse} from "./models/responses/submit-answer.response";
 import {GenerateQuestionDto} from "../questions/models/dto/generate-question.dto";
 import {FastifyReply} from "fastify";
 import {PaginationDto} from "../../common/models/dto/pagination.dto";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
+import {NewGameDto} from "./models/dto/new-game.dto";
+import {GameModes} from "@prisma/client";
 
 @Controller("games")
 @ApiTags("Games")
@@ -31,7 +33,14 @@ export class GamesController{
     @Post("new/:quiz_id")
     @UseGuards(MaybeAuthGuard)
     @ApiBearerAuth()
-    async startGame(@Req() req: MaybeAuthenticatedRequest, @Param("quiz_id") quizId: string): Promise<GameEntity>{
+    async startGame(@Req() req: MaybeAuthenticatedRequest, @Param("quiz_id") quizId: string, @Body() body: NewGameDto): Promise<GameEntity>{
+        if(body.gameMode === GameModes.TIME_EASY){
+            return this.gamesService.startGame(quizId, req.user, GameModes.TIME_EASY);
+        }else if(body.gameMode === GameModes.TIME_MEDIUM){
+            return this.gamesService.startGame(quizId, req.user, GameModes.TIME_MEDIUM);
+        }else if(body.gameMode === GameModes.TIME_HARD){
+            return this.gamesService.startGame(quizId, req.user, GameModes.TIME_HARD);
+        }
         return this.gamesService.startGame(quizId, req.user);
     }
 

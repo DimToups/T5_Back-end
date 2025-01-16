@@ -1,13 +1,18 @@
-import {ForbiddenException, Injectable, NotFoundException, UnauthorizedException} from "@nestjs/common";
+import {
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
+    UnauthorizedException,
+} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {UserEntity} from "../users/models/entities/user.entity";
-import {Categories, Difficulties, Games, Questions, QuizQuestions} from "@prisma/client";
+import {Categories, Difficulties, GameModes, Games} from "@prisma/client";
 import {CipherService} from "../../common/services/cipher.service";
 import {GameEntity} from "./models/entities/game.entity";
 import {PublicQuestionEntity} from "./models/entities/public-question.entity";
-import {SubmitAnswerResponse} from "./models/submit-answer.response";
+import {SubmitAnswerResponse} from "./models/responses/submit-answer.response";
 import {QuizService} from "../quiz/quiz.service";
-import {QuestionsService} from "../questions/questions.service";
 import {QuizEntity} from "../quiz/models/entity/quiz.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 
@@ -17,7 +22,6 @@ export class GamesService{
         private readonly prismaService: PrismaService,
         private readonly cipherService: CipherService,
         private readonly quizService: QuizService,
-        private readonly questionsService: QuestionsService,
     ){}
 
     private generateQuizCode(): string{
@@ -44,6 +48,7 @@ export class GamesService{
         if(user && game.user_id && game.user_id !== user.id)
             throw new ForbiddenException("You're not allowed to access this game.");
         return {
+            mode: game.mode,
             id: game.id,
             quizId: game.quiz_id,
             quizTitle: game.quiz.title,
@@ -78,6 +83,7 @@ export class GamesService{
         if(user && game.user_id && game.user_id !== user.id)
             throw new ForbiddenException("You're not allowed to access this game.");
         return {
+            mode: game.mode,
             id: game.id,
             quizId: game.quiz_id,
             quizTitle: game.quiz.title,
@@ -92,8 +98,11 @@ export class GamesService{
         } as GameEntity;
     }
 
-    async startGame(quizId: string, user?: UserEntity): Promise<GameEntity>{
-        const quiz: any = await this.prismaService.quiz.findUnique({
+    async startGame(quizId: string, user?: UserEntity, gameMode?: GameModes): Promise<GameEntity>{
+        if(!gameMode){
+            gameMode = GameModes.SINGLEPLAYER;
+        }
+        const quiz = await this.prismaService.quiz.findUnique({
             where: {
                 id: quizId,
             },
@@ -111,10 +120,30 @@ export class GamesService{
                 quiz_id: quizId,
                 user_id: user?.id,
                 code: this.generateQuizCode(),
+                mode: gameMode,
             },
         });
+        // time mode
+        if(gameMode === GameModes.TIME_EASY || gameMode === GameModes.TIME_MEDIUM || gameMode === GameModes.TIME_HARD){
+            await this.prismaService.timeLimits.create({
+                data: {
+                    game: {
+                        connect: {
+                            id: game.id,
+                        },
+                    },
+                    question: {
+                        connect: {
+                            sum: quiz.quiz_questions[0].question_id,
+                        },
+                    },
+                    time_limit: new Date(new Date().getTime() + GamesService.getTimeLimit(gameMode) * 1000),
+                },
+            });
+        }
         return {
             id: game.id,
+            mode: game.mode,
             quizId: game.quiz_id,
             quizTitle: quiz.title,
             userId: game.user_id,
@@ -182,52 +211,94 @@ export class GamesService{
             throw new UnauthorizedException("You're not allowed to access this game.");
         if(user && game.user_id && game.user_id !== user.id)
             throw new ForbiddenException("You're not allowed to access this game.");
-        const quiz: any = await this.prismaService.quiz.findUnique({
+        const quiz = await this.prismaService.quiz.findUnique({
             where: {
                 id: game.quiz_id,
             },
             include: {
                 quiz_questions: {
                     include: {
-                        question: true,
+                        question: {
+                            include: {
+                                answers: true,
+                            },
+                        },
                     },
                 },
             },
         });
-        const questions: Questions[] = quiz.quiz_questions.map((quizQuestion: any): QuizQuestions => quizQuestion.question);
-        const question: Questions = questions[game.current_question];
+        const questions = quiz.quiz_questions.map(quizQuestion => quizQuestion.question);
+        const question = questions[game.current_question];
         if(!question)
             throw new NotFoundException("Question not found");
-        if(question.incorrect_answers.length === 3)
+        const answers = question.answers.map((answer) => {
+            return {
+                id: answer.id,
+                questionSum: answer.question_sum,
+                type: answer.type,
+                answerContent: answer.answer_content,
+            };
+        });
+        if(question.answers.length === 4){
+            answers.sort(() => Math.random() - 0.5);
             return {
                 sum: question.sum,
                 question: question.question,
                 difficulty: question.difficulty,
                 category: question.category,
-                answers: question.incorrect_answers.concat(question.correct_answer).sort(() => Math.random() - 0.5),
+                answers: answers,
                 position: game.current_question + 1,
             };
-        else
+        }else{
             return {
                 sum: question.sum,
                 question: question.question,
                 difficulty: question.difficulty,
                 category: question.category,
-                answers: question.incorrect_answers.concat(question.correct_answer),
+                answers: answers,
                 position: game.current_question + 1,
             };
+        }
     }
 
     async answerQuestion(gameId: string, answer?: string, user?: UserEntity): Promise<SubmitAnswerResponse>{
         // GetCurrentQuestion already check game ownership
         const currentQuestion: PublicQuestionEntity = await this.getCurrentQuestion(gameId, user);
-        const question: Questions = await this.prismaService.questions.findUnique({
+        const question = await this.prismaService.questions.findUnique({
             where: {
                 sum: currentQuestion.sum,
             },
+            include: {
+                answers: true,
+            },
         });
-        const isCorrect: boolean = question.correct_answer.toLowerCase() === answer?.toLowerCase();
-        const game: Games = await this.prismaService.games.update({
+        const correctAnswer = question.answers.find(answer => answer.correct);
+        const isCorrect: boolean = correctAnswer?.id === answer;
+        let incrementScore = isCorrect ? 1 : 0;
+        // time mode
+        let game: Games = await this.prismaService.games.findUnique({
+            where: {
+                id: gameId,
+            },
+        });
+        if(game.mode === GameModes.TIME_EASY || game.mode === GameModes.TIME_MEDIUM || game.mode === GameModes.TIME_HARD){
+            // check if time limit is reached
+            const timeLimits = await this.prismaService.timeLimits.findFirst({
+                where: {
+                    game: {
+                        id: gameId,
+                    },
+                    question: {
+                        sum: question.sum,
+                    },
+                },
+            });
+            // if time limit is reached or superior to current time, do not increment score
+            if(timeLimits.time_limit.getTime() <= new Date().getTime()){
+                incrementScore = 0;
+            }
+        }
+        game = await this.prismaService.games.update({
             where: {
                 id: gameId,
             },
@@ -236,11 +307,13 @@ export class GamesService{
                     increment: 1,
                 },
                 score: {
-                    increment: isCorrect ? 1 : 0,
+                    increment: incrementScore,
                 },
             },
         });
-        await this.prismaService.answers.create({
+        if(game.mode === GameModes.MULTIPLAYER || game.mode === GameModes.TEAM_EASY || game.mode === GameModes.TEAM_MEDIUM || game.mode === GameModes.TEAM_HARD)
+            throw new BadRequestException("You can't answer questions using this way for this game mode");
+        await this.prismaService.statisticsAnswers.create({
             data: {
                 game_id: gameId,
                 question_sum: question.sum,
@@ -251,6 +324,26 @@ export class GamesService{
         let nextQuestion: PublicQuestionEntity | undefined;
         try{
             nextQuestion = await this.getCurrentQuestion(game.id, user);
+            // time mode
+            if(game.mode === GameModes.TIME_EASY || game.mode === GameModes.TIME_MEDIUM || game.mode === GameModes.TIME_HARD){
+                const timeLimit = GamesService.getTimeLimit(game.mode);
+                const dateTimeLimit = new Date(new Date().getTime() + timeLimit * 1000);
+                await this.prismaService.timeLimits.create({
+                    data: {
+                        game: {
+                            connect: {
+                                id: gameId,
+                            },
+                        },
+                        question: {
+                            connect: {
+                                sum: nextQuestion.sum,
+                            },
+                        },
+                        time_limit: dateTimeLimit,
+                    },
+                });
+            }
         }catch(_){
             // Only possible error is question not found (end of quiz)
             await this.prismaService.games.update({
@@ -264,14 +357,99 @@ export class GamesService{
         }
         return {
             isCorrect,
-            correctAnswer: question.correct_answer,
+            correctAnswer: question.answers.find(answer => answer.correct)?.id,
             score: game.score,
             nextQuestion,
         };
     }
 
+    /**
+     * Time limit by gameMode
+     * @param gameMode
+     * @return time in seconds
+     */
+    private static getTimeLimit(gameMode: GameModes): number{
+        if(gameMode === GameModes.TIME_EASY){
+            return 30;
+        }else if(gameMode === GameModes.TIME_MEDIUM){
+            return 15;
+        }else if(gameMode === GameModes.TIME_HARD){
+            return 5;
+        }
+        return 0;
+    }
+
+    async isAnswerCorrect(questionSum: string, answer: string): Promise<boolean>{
+        const question = await this.prismaService.questions.findUnique({
+            where: {
+                sum: questionSum,
+            },
+            include: {
+                answers: true,
+            },
+        });
+        return question.answers.find(answer => answer.correct)?.id === answer;
+    }
+
+    async getCorrectAnswer(questionSum: string): Promise<string>{
+        const question = await this.prismaService.questions.findUnique({
+            where: {
+                sum: questionSum,
+            },
+            include: {
+                answers: true,
+            },
+        });
+        return question.answers.find(answer => answer.correct)?.id;
+    }
+
     async createQuickGame(amount: number, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<GameEntity>{
         let quiz: QuizEntity = await this.quizService.createQuickQuiz(amount, difficulty, category, user);
         return await this.startGame(quiz.id, user);
+    }
+
+    async getQuestionCount(gameId: string): Promise<number>{
+        const game = await this.prismaService.games.findUnique({
+            where: {
+                id: gameId,
+            },
+            include: {
+                quiz: {
+                    include: {
+                        quiz_questions: true,
+                    },
+                },
+            },
+        });
+        return game.quiz.quiz_questions.length;
+    }
+
+    async nextQuestion(gameId: string): Promise<void>{
+        const game = await this.prismaService.games.findUnique({
+            where: {
+                id: gameId,
+            },
+        });
+        if(game.current_question >= await this.getQuestionCount(gameId)){
+            await this.prismaService.games.update({
+                where: {
+                    id: gameId,
+                },
+                data: {
+                    ended_at: new Date(),
+                },
+            });
+            return;
+        }
+        await this.prismaService.games.update({
+            where: {
+                id: gameId,
+            },
+            data: {
+                current_question: {
+                    increment: 1,
+                },
+            },
+        });
     }
 }

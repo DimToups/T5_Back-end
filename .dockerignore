@@ -6,3 +6,4 @@ dist/
 .flaskenv*
 !.env.project
 !.env.vault
+public_answers/

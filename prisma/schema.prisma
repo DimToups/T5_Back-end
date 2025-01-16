@@ -13,6 +13,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AnswerType {
+  TEXT
+  IMAGE
+  SOUND
+
+  @@map("answer_type")
+}
+
 enum Difficulties {
   EASY
   MEDIUM
@@ -50,15 +58,29 @@ enum Categories {
   @@map("categories")
 }
 
+enum GameModes {
+  SINGLEPLAYER // Normal mode
+  TIME_EASY
+  TIME_MEDIUM
+  TIME_HARD
+  MULTIPLAYER
+  TEAM_EASY
+  TEAM_MEDIUM
+  TEAM_HARD
+
+  @@map("game_modes")
+}
+
 model Users {
-  id        String      @id
-  username  String      @unique
-  email     String      @unique
-  password  String
-  sessions  Sessions[]
-  quiz      Quiz[]
-  games     Games[]
-  questions Questions[]
+  id           String        @id
+  username     String        @unique
+  email        String        @unique
+  password     String
+  sessions     Sessions[]
+  quiz         Quiz[]
+  games        Games[]
+  questions    Questions[]
+  room_players RoomPlayers[]
 
   @@map("users")
 }
@@ -91,35 +113,61 @@ model Quiz {
 }
 
 model Games {
-  id               String    @id
+  id               String              @id
+  mode             GameModes           @default(SINGLEPLAYER)
   quiz_id          String
-  quiz             Quiz      @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
-  current_question Int       @default(0)
-  score            Int       @default(0)
+  quiz             Quiz                @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  current_question Int                 @default(0)
+  score            Int                 @default(0)
   user_id          String?
-  code             String    @unique
-  user             Users?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  code             String              @unique
+  user             Users?              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  created_at       DateTime            @default(now())
+  updated_at       DateTime            @updatedAt
   ended_at         DateTime?
-  answers          Answers[]
+  answers          StatisticsAnswers[]
+  room             Rooms?
+  time_limits      TimeLimits[]
 
   @@map("games")
 }
 
 model Questions {
-  sum               String          @id
-  question          String
-  difficulty        Difficulties?
-  category          Categories?
-  correct_answer    String
-  incorrect_answers String[]
-  user_id           String?
-  user              Users?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  quiz_questions    QuizQuestions[]
-  answers           Answers[]
+  sum                String              @id
+  question           String
+  difficulty         Difficulties?
+  category           Categories?
+  answers            Answers[]
+  user_id            String?
+  user               Users?              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  quiz_questions     QuizQuestions[]
+  statistics_answers StatisticsAnswers[]
+  time_limits        TimeLimits[]
 
   @@map("questions")
+}
+
+model TimeLimits {
+  game_id      String
+  game         Games     @relation(fields: [game_id], references: [id], onDelete: Cascade)
+  question_sum String
+  question     Questions @relation(fields: [question_sum], references: [sum], onDelete: Cascade)
+  time_limit   DateTime
+
+  @@id([game_id, question_sum])
+  @@map("time_limits")
+}
+
+model Answers {
+  id             String     @id
+  question_sum   String
+  question       Questions  @relation(fields: [question_sum], references: [sum], onDelete: Cascade)
+  correct        Boolean
+  type           AnswerType
+  answer_content String? // text or {image, audio} path
+  created_at     DateTime   @default(now())
+
+  @@map("answers")
 }
 
 model QuizQuestions {
@@ -133,7 +181,7 @@ model QuizQuestions {
   @@map("quiz_questions")
 }
 
-model Answers {
+model StatisticsAnswers {
   game_id      String
   game         Games     @relation(fields: [game_id], references: [id], onDelete: Cascade)
   question_sum String
@@ -143,5 +191,41 @@ model Answers {
   created_at   DateTime  @default(now())
 
   @@id([game_id, question_sum])
-  @@map("answers")
+  @@map("statistics_answers")
+}
+
+model Rooms {
+  game_id      String        @id
+  game         Games         @relation(fields: [game_id], references: [id], onDelete: Cascade)
+  started_at   DateTime?
+  max_players  Int?
+  room_players RoomPlayers[]
+  teams        Teams[]
+
+  @@map("rooms")
+}
+
+model RoomPlayers {
+  id       String  @id
+  user_id  String?
+  user     Users?  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  username String?
+  score    Int     @default(0)
+  room_id  String
+  room     Rooms   @relation(fields: [room_id], references: [game_id], onDelete: Cascade)
+  owner    Boolean @default(false)
+  team_id  String?
+  team     Teams?  @relation(fields: [team_id], references: [id], onDelete: Cascade)
+
+  @@map("room_players")
+}
+
+model Teams {
+  id           String        @id
+  name         String
+  room_id      String
+  room         Rooms         @relation(fields: [room_id], references: [game_id], onDelete: Cascade)
+  room_players RoomPlayers[]
+
+  @@map("teams")
 }

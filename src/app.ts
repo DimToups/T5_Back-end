@@ -10,6 +10,10 @@ import {Logger} from "@nestjs/common";
 import * as process from "process";
 import * as dotenv from "dotenv";
 import {FastifyListenOptions} from "fastify/types/instance";
+import fastifyMultipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
+import {join} from "node:path";
+import {AsyncApiDocumentBuilder, AsyncApiModule} from "nestjs-asyncapi";
 
 dotenv.config();
 
@@ -39,6 +43,11 @@ async function loadServer(server: NestFastifyApplication){
 
     // Middlewares
     server.use(new LoggerMiddleware().use);
+    await server.register(fastifyMultipart as any);
+    await server.register(fastifyStatic as any, {
+        root: join(process.cwd(), "public_answers"),
+        prefix: "/public_answers/",
+    });
     await server.register(fastifyHelmet as any, {
         contentSecurityPolicy: false,
         crossOriginEmbedderPolicy: false,
@@ -53,6 +62,7 @@ async function loadServer(server: NestFastifyApplication){
         .setVersion(process.env.npm_package_version)
         .addBearerAuth()
         .build();
+
     const document = SwaggerModule.createDocument(server, config);
     const theme = new SwaggerTheme();
     const customCss = theme.getBuffer(SwaggerThemeNameEnum.DARK);
@@ -67,6 +77,25 @@ async function loadServer(server: NestFastifyApplication){
         },
         customCss,
     });
+
+    const asyncApiOptions = new AsyncApiDocumentBuilder()
+        .setTitle("Fregna API")
+        .setDescription("Documentation for the Fregna API")
+        .setVersion(process.env.npm_package_version)
+        .setDefaultContentType("application/json")
+        .addServer("Test", {
+            url: "http://localhost:4000",
+            protocol: "http",
+            security: [{jwt: []}],
+        })
+        .addSecurity("jwt", {
+            type: "httpApiKey" as any,
+            name: "Authorization",
+            in: "header",
+        })
+        .build();
+    const asyncApiDocument = AsyncApiModule.createDocument(server, asyncApiOptions);
+    await AsyncApiModule.setup("asyncapi", server, asyncApiDocument);
 
     server.useGlobalPipes(new CustomValidationPipe());
 }

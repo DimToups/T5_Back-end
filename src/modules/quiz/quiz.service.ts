@@ -3,6 +3,7 @@ import {
     ConflictException,
     ForbiddenException,
     Injectable,
+    Logger,
     NotFoundException,
     UnauthorizedException,
 } from "@nestjs/common";
@@ -17,13 +18,21 @@ import {UserEntity} from "../users/models/entities/user.entity";
 import {PublicQuizEntity} from "./models/entity/public-quiz.entity";
 import {PaginationResponse} from "../../common/models/responses/pagination.response";
 import {UserQuizEntity} from "./models/entity/user-quiz.entity";
+import {AnswerEntity} from "../questions/models/entities/answer.entity";
+import {UpdateQuestionDto} from "./models/dto/update-question.dto";
+import {AnswerContentDto} from "./models/dto/answer-content.dto";
+import {ConfigService} from "@nestjs/config";
+import {PartialAnswerEntity} from "../questions/models/entities/partial-answer.entity";
 
 @Injectable()
 export class QuizService{
+    private readonly logger: Logger = new Logger(QuizService.name);
+
     constructor(
         private readonly prismaService: PrismaService,
         private readonly cipherService: CipherService,
         private readonly questionsService: QuestionsService,
+        private readonly configService: ConfigService,
     ){}
 
     async createQuiz(title: string, description?: string, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<QuizEntity>{
@@ -69,14 +78,18 @@ export class QuizService{
     }
 
     async getQuizDataById(quizId: string, user?: UserEntity): Promise<QuizEntity>{
-        const quiz: any = await this.prismaService.quiz.findUnique({
+        const quiz = await this.prismaService.quiz.findUnique({
             where: {
                 id: quizId,
             },
             include: {
                 quiz_questions: {
                     include: {
-                        question: true,
+                        question: {
+                            include: {
+                                answers: true,
+                            },
+                        },
                     },
                 },
             },
@@ -89,6 +102,25 @@ export class QuizService{
             throw new UnauthorizedException("You must be connected to get this quiz.");
         if(user && quiz.user_id !== user.id)
             throw new ForbiddenException("You must be the owner of the quiz to get it.");
+
+        const questions = quiz.quiz_questions.map((quizQuestion): QuestionEntity => {
+            const question = quizQuestion.question;
+            return {
+                sum: question.sum,
+                question: question.question,
+                difficulty: question.difficulty,
+                category: question.category,
+                answers: question.answers.map(answer => new AnswerEntity({
+                    id: answer.id,
+                    questionSum: answer.question_sum,
+                    correct: answer.correct,
+                    type: answer.type,
+                    answerContent: answer.answer_content,
+                })),
+                userId: question.user_id,
+            };
+        });
+
         return new QuizEntity({
             id: quiz.id,
             title: quiz.title,
@@ -96,19 +128,119 @@ export class QuizService{
             difficulty: quiz.difficulty || undefined,
             category: quiz.category || undefined,
             userId: quiz.user_id || undefined,
-            questions: quiz.quiz_questions.map((quizQuestion: any): QuestionEntity => {
-                const question = quizQuestion.question;
-                return {
-                    sum: question.sum,
-                    question: question.question,
-                    difficulty: question.difficulty,
-                    category: question.category,
-                    correctAnswer: question.correct_answer,
-                    incorrectAnswers: question.incorrect_answers,
-                    userId: question.user_id,
-                } as QuestionEntity;
-            }),
+            questions: questions,
         });
+    }
+
+    async updateQuestion(quizId: string, questionId: string, user: UserEntity, updateQuestion: UpdateQuestionDto): Promise<QuestionEntity>{
+        const quiz = await this.prismaService.quiz.findUnique({
+            where: {
+                id: quizId,
+            },
+            include: {
+                quiz_questions: {
+                    include: {
+                        question: {
+                            include: {
+                                answers: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if(!quiz)
+            throw new NotFoundException("This quiz doesn't exist.");
+        if(!user && quiz.user_id)
+            throw new UnauthorizedException("You're not allowed to access this quiz.");
+        if(user && quiz.user_id !== user.id)
+            throw new ForbiddenException("You're not allowed to access this quiz.");
+
+        const question = quiz.quiz_questions.find(question => question.question_id === questionId).question;
+        if(!question)
+            throw new NotFoundException("This question doesn't exist.");
+
+        const questionEntity = new QuestionEntity({
+            sum: question.sum,
+            question: question.question,
+            difficulty: question.difficulty,
+            category: question.category,
+            answers: question.answers.map(answer => new AnswerEntity({
+                id: answer.id,
+                questionSum: answer.question_sum,
+                correct: answer.correct,
+                type: answer.type,
+                answerContent: answer.answer_content,
+            })),
+            userId: question.user_id,
+        });
+        if(this.isEqual(updateQuestion, questionEntity)){
+            return questionEntity;
+        }
+
+        const updatedQuestion = await this.prismaService.questions.update({
+            where: {
+                sum: question.sum,
+            },
+            data: {
+                question: updateQuestion.question,
+                difficulty: updateQuestion.difficulty,
+                category: updateQuestion.category,
+                answers: {
+                    create: question.answers.map(answer => ({
+                        type: answer.type,
+                        correct: answer.correct,
+                        answer_content: answer.answer_content,
+                        question_sum: question.sum,
+                        id: this.cipherService.generateUuid(7),
+                    })),
+                    deleteMany: {
+                        question_sum: {
+                            in: question.answers.map(answer => answer.question_sum),
+                        },
+                    },
+                },
+            },
+            include: {
+                answers: true,
+            },
+        });
+        return new QuestionEntity({
+            sum: updatedQuestion.sum,
+            question: updatedQuestion.question,
+            difficulty: updatedQuestion.difficulty,
+            category: updatedQuestion.category,
+            answers: updatedQuestion.answers.map(answer => new AnswerEntity({
+                id: answer.id,
+                questionSum: answer.question_sum,
+                correct: answer.correct,
+                type: answer.type,
+                answerContent: answer.answer_content,
+            })),
+            userId: updatedQuestion.user_id,
+        });
+    }
+
+    isEqual(questionDto: UpdateQuestionDto, question: QuestionEntity): boolean{
+        if(question.question !== questionDto.question
+          || question.difficulty !== questionDto.difficulty
+          || question.category !== questionDto.category
+          || question.answers.length !== questionDto.answers.length){
+            return false;
+        }
+        for(let i = 0; i < question.answers.length; i++){
+            let answer = question.answers[i];
+            let answerDto = questionDto.answers[i];
+            if((answer instanceof AnswerContentDto
+              && answerDto instanceof AnswerContentDto
+              && (answer.type !== answerDto.type
+                || answer.correct !== answerDto.correct)) || answer === answerDto){
+                return false;
+            }
+        }
+
+        return true;
     }
 
     async updateQuiz(
@@ -119,7 +251,7 @@ export class QuizService{
         description?: string,
         difficulty?: Difficulties,
         category?: Categories,
-    ): Promise<QuizEntity>{
+    ){
         let quiz: Quiz = await this.prismaService.quiz.findUnique({
             where: {
                 id: quizId,
@@ -134,48 +266,50 @@ export class QuizService{
         if(user && quiz.user_id !== user.id)
             throw new ForbiddenException("You must be the owner of the quiz to update it.");
 
-        quiz = await this.prismaService.quiz.update({
-            where: {
-                id: quizId,
-            },
-            data: {
-                title,
-                description,
-                difficulty,
-                category,
-            },
-        });
-        await this.prismaService.quizQuestions.deleteMany({
-            where: {
-                quiz_id: quizId,
-            },
-        });
-        const questions: QuestionEntity[] = await this.questionsService.addPartialQuestionsToDatabase(partialQuestions, user);
-        // Dedupe questions array
-        let filteredQuestions: QuestionEntity[] = questions.filter((value: QuestionEntity, index: number, self: QuestionEntity[]): boolean =>
-            index === self.findIndex((t: QuestionEntity) => (
-                t.sum === value.sum
-            )),
-        );
-        const quizQuestions: QuizQuestions[] = filteredQuestions.map((question: QuestionEntity): QuizQuestions => {
-            return {
-                quiz_id: quizId,
-                question_id: question.sum,
-                position: questions.findIndex((q: QuestionEntity): boolean => q.sum === question.sum),
-            } as QuizQuestions;
-        });
-        await this.prismaService.quizQuestions.createMany({
-            data: quizQuestions,
-        });
-        return new QuizEntity({
-            id: quiz.id,
-            title: quiz.title,
-            description: quiz.description || undefined,
-            difficulty: quiz.difficulty || undefined,
-            category: quiz.category || undefined,
-            userId: quiz.user_id || undefined,
-            questions,
-        });
+        return this.prismaService.$transaction(async(tx) => {
+            quiz = await tx.quiz.update({
+                where: {
+                    id: quizId,
+                },
+                data: {
+                    title,
+                    description,
+                    difficulty,
+                    category,
+                },
+            });
+            await tx.quizQuestions.deleteMany({
+                where: {
+                    quiz_id: quizId,
+                },
+            });
+            const questions: QuestionEntity[] = await this.questionsService.addPartialQuestionsToDatabase(partialQuestions, user, tx);
+            // Dedupe questions array
+            let filteredQuestions: QuestionEntity[] = questions.filter((value: QuestionEntity, index: number, self: QuestionEntity[]): boolean =>
+                index === self.findIndex((t: QuestionEntity) => (
+                    t.sum === value.sum
+                )),
+            );
+            const quizQuestions: QuizQuestions[] = filteredQuestions.map((question: QuestionEntity): QuizQuestions => {
+                return {
+                    quiz_id: quizId,
+                    question_id: question.sum,
+                    position: questions.findIndex((q: QuestionEntity): boolean => q.sum === question.sum),
+                } as QuizQuestions;
+            });
+            await tx.quizQuestions.createMany({
+                data: quizQuestions,
+            });
+            return new QuizEntity({
+                id: quiz.id,
+                title: quiz.title,
+                description: quiz.description || undefined,
+                difficulty: quiz.difficulty || undefined,
+                category: quiz.category || undefined,
+                userId: quiz.user_id || undefined,
+                questions,
+            });
+        }, {timeout: 60000});
     }
 
     async publishQuiz(quizId: string, user?: UserEntity): Promise<void>{
@@ -333,5 +467,119 @@ export class QuizService{
                 id: quizId,
             },
         });
+    }
+
+    async generateQuiz(user: UserEntity, theme: string, questionCount: number, insertInDatabase: boolean){
+        const apiUrl = this.configService.get<string>("AI_API_URL");
+        const apiKey = this.configService.get<string>("AI_API_KEY");
+        const prompt = `
+        Voici le format d'un quiz :
+{
+  "difficulty": "EASY",
+  "category": "GENERAL_KNOWLEDGE",
+  "title": "string",
+  "description": "string",
+  "questions": [
+    {
+      "difficulty": "EASY",
+      "category": "GENERAL_KNOWLEDGE",
+      "question": "string",
+      "correctAnswer": "string",
+      "incorrectAnswers": [
+        "string"
+      ]
+    }
+  ]
+}
+
+Voici les catégories :
+[
+  "GENERAL_KNOWLEDGE",
+  "ENTERTAINMENT_BOOKS",
+  "ENTERTAINMENT_FILM",
+  "ENTERTAINMENT_MUSIC",
+  "ENTERTAINMENT_MUSICALS_AND_THEATRES",
+  "ENTERTAINMENT_TELEVISION",
+  "ENTERTAINMENT_VIDEO_GAMES",
+  "ENTERTAINMENT_BOARD_GAMES",
+  "SCIENCE_AND_NATURE",
+  "SCIENCE_COMPUTERS",
+  "SCIENCE_MATHEMATICS",
+  "MYTHOLOGY",
+  "SPORTS",
+  "GEOGRAPHY",
+  "HISTORY",
+  "POLITICS",
+  "ART",
+  "CELEBRITIES",
+  "ANIMALS",
+  "VEHICLES",
+  "ENTERTAINMENT_COMICS",
+  "SCIENCE_GADGETS",
+  "ENTERTAINMENT_JAPANESE_ANIME_AND_MANGA",
+  "ENTERTAINMENT_CARTOON_AND_ANIMATIONS"
+]
+
+Voici les difficultées :
+[
+  "EASY",
+  "MEDIUM",
+  "HARD"
+]
+
+A partir de cela, génère moi un quiz de ${questionCount} questions en Français sur le thème "${theme}". Donne moi toutes les questions d'un coup. Utilise les dernières données dont tu disposes. Ne répond que le Json.
+        `;
+        const response = await fetch(`${apiUrl}/v1/chat/completions`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Cookie": `token=${apiKey}`,
+            },
+            body: JSON.stringify({
+                model: "llama-3.2-3b-instruct:q4_k_m",
+                messages: [
+                    {
+                        role: "user",
+                        content: prompt,
+                        image: "",
+                    },
+                ],
+                stream: false,
+            }),
+        });
+        const data = await response.json();
+        if(data.error)
+            throw new BadRequestException(data.error);
+        try{
+            const content = JSON.parse(data.choices[0].message.content);
+            if(insertInDatabase){
+                const quiz = await this.createQuiz(content.title, content.description, content.difficulty, content.category, user);
+                await this.updateQuiz(quiz.id, quiz.title, content.questions.map((question: any): PartialQuestionEntity => {
+                    return {
+                        question: question.question,
+                        difficulty: question.difficulty,
+                        category: question.category,
+                        answers: {
+                            ...question.incorrectAnswers.map((answer: string): PartialAnswerEntity => {
+                                return {
+                                    correct: false,
+                                    answerContent: answer,
+                                    type: "TEXT",
+                                };
+                            }),
+                            ...{
+                                correct: true,
+                                answerContent: question.correctAnswer,
+                                type: "TEXT",
+                            },
+                        },
+                    };
+                }), user, quiz.description, quiz.difficulty, quiz.category);
+            }
+            return content;
+        }catch(_){
+            this.logger.debug(data.choices[0].message.content);
+            throw new BadRequestException("Could not parse answer");
+        }
     }
 }

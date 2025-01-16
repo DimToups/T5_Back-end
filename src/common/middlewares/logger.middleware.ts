@@ -5,27 +5,21 @@ import {FastifyReply, FastifyRequest} from "fastify";
 export class LoggerMiddleware implements NestMiddleware{
     static logger: Logger = new Logger(LoggerMiddleware.name);
 
-    use(req: FastifyRequest["raw"], res: FastifyReply["raw"], next: () => void){
+    use(req: FastifyRequest, res: FastifyReply, next: () => void){
         const startTime = Date.now();
-        res.on("finish", () => {
+        (res as any).on("finish", () => {
             const path = req.url;
             try{
-                let httpOrHttps;
-                if(!req.connection.localPort)
-                    httpOrHttps = "H2";
-                else
-                    httpOrHttps = req.connection.localPort.toString() === process.env.HTTPS_PORT ? "HTTPS" : "HTTP";
+                const protocol = LoggerMiddleware.getProtocol(req);
                 const method = req.method;
                 if(method === "OPTIONS")
                     return;
                 const statusCode = res.statusCode;
                 const duration = Date.now() - startTime;
                 const resSize: any = res.getHeader("Content-Length") || "0";
-                // const nRes = res as any;
-                // const resSize = nRes._contentLength || "0";
                 const intResSize = parseInt(resSize);
-                LoggerMiddleware.logger.log(`${httpOrHttps} ${method} ${path} ${statusCode} ${duration}ms ${intResSize}`);
-                LoggerMiddleware.requestTimeLogger(path, method, duration);
+                LoggerMiddleware.logger.log(`${protocol} ${method} ${path} ${statusCode} ${duration}ms ${intResSize}`);
+                LoggerMiddleware.logRequestTime(path, method, duration);
             }catch(e){
                 LoggerMiddleware.logger.warn(`Can't log route ${path} : ${e}`);
             }
@@ -33,28 +27,26 @@ export class LoggerMiddleware implements NestMiddleware{
         next();
     }
 
-    static requestTimeLogger(path: string, method: string, ms: number){
-        switch (method){
-            case "GET":
-                if(ms > 750)
-                    LoggerMiddleware.logger.warn(`GET (${path}) request took more than 750ms (${ms}ms)`);
-                break;
-            case "POST":
-                if(ms > 1500)
-                    LoggerMiddleware.logger.warn(`POST (${path}) request took more than 1500ms (${ms}ms)`);
-                break;
-            case "PUT":
-                if(ms > 1500)
-                    LoggerMiddleware.logger.warn(`PUT (${path}) request took more than 1500ms (${ms}ms)`);
-                break;
-            case "PATCH":
-                if(ms > 500)
-                    LoggerMiddleware.logger.warn(`PATCH (${path}) request took more than 500ms (${ms}ms)`);
-                break;
-            case "DELETE":
-                if(ms > 500)
-                    LoggerMiddleware.logger.warn(`DELETE (${path}) request took more than 500ms (${ms}ms)`);
-                break;
+    static getProtocol(req: FastifyRequest): string{
+        const localPort: number = req.connection.localPort;
+        if(!localPort)
+            return "H2";
+        return localPort.toString() === process.env.HTTPS_PORT ? "HTTPS" : "HTTP";
+    }
+
+    static logRequestTime(path: string, method: string, duration: number): void{
+        const thresholds: Record<string, number> = {
+            GET: 750,
+            POST: 1500,
+            PUT: 1500,
+            PATCH: 500,
+            DELETE: 500,
+        };
+        const threshold = thresholds[method];
+        if(threshold && duration > threshold){
+            LoggerMiddleware.logger.warn(
+                `${method} (${path}) request exceeded ${threshold}ms (${duration}ms)`,
+            );
         }
     }
 }
