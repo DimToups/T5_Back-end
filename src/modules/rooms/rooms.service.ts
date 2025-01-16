@@ -1,4 +1,4 @@
-import {BadRequestException, ForbiddenException, Injectable, NotFoundException} from "@nestjs/common";
+import {BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException} from "@nestjs/common";
 import {PrismaService} from "../../common/services/prisma.service";
 import {CreateRoomDto} from "./models/dto/create-room.dto";
 import {UserEntity} from "../users/models/entities/user.entity";
@@ -25,6 +25,7 @@ import {QuizService} from "../quiz/quiz.service";
 export class RoomsService{
     private readonly startedRooms: Promise<void>[] = [];
     private readonly playerAnswers: Map<string, string[][]> = new Map<string, string[][]>();
+    private readonly logger: Logger = new Logger(RoomsService.name);
 
     constructor(
         private readonly prismaService: PrismaService,
@@ -279,6 +280,7 @@ export class RoomsService{
     }
 
     private async runRoom(roomData: CompleteRoomEntity): Promise<void>{
+        this.logger.debug(`Running room ${roomData.room.id}`);
         roomData.room.startedAt = new Date();
         await this.prismaService.rooms.update({
             where: {
@@ -319,8 +321,11 @@ export class RoomsService{
             const start = Date.now();
             while(Date.now() - start < questionDuration){
                 // Check if all players have answered
-                if(this.playerAnswers.get(roomData.room.id)[i]?.length || 0 === roomData.players.length)
+                this.logger.debug(`${this.playerAnswers.get(roomData.room.id)[i]?.length || 0} players answered for room ${roomData.room.id} (question ${i})`);
+                if(this.playerAnswers.get(roomData.room.id)[i]?.length || 0 === roomData.players.length){
+                    this.logger.debug(`All players answered for room ${roomData.room.id}, starting next question`);
                     break;
+                }
                 await this.sleep(250);
             }
             this.roomsGatewayService.onQuestionEnd(roomData.room.id, {
@@ -331,6 +336,7 @@ export class RoomsService{
             await this.sleep(5000); // 5s
             await this.gamesService.nextQuestion(roomData.room.id);
         }
+        this.logger.debug(`Ending room ${roomData.room.id}`);
         this.roomsGatewayService.onRoomEnd(roomData.room.id, await this.getRoomData(roomData.room.id));
     }
 
@@ -404,11 +410,13 @@ export class RoomsService{
                 },
             });
         // If correct answer for scrum mode, fill answer for all players to trigger next question
-        if(isAnswerCorrect && room.game.mode === GameModes.MULTIPLAYER)
+        if(isAnswerCorrect && room.game.mode === GameModes.MULTIPLAYER){
+            this.logger.debug("Correct answer found, complete player answers to trigger next question");
             this.playerAnswers.set(roomId, {
                 ...this.playerAnswers.get(roomId),
                 [currentQuestion.position]: roomPlayers.map(player => player.id),
             });
+        }
         // Trigger update for clients
         this.roomsGatewayService.onPlayerAnswer(roomId, this.playerAnswers.get(roomId)[currentQuestion.position]);
     }
