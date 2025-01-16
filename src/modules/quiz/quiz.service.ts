@@ -3,6 +3,7 @@ import {
     ConflictException,
     ForbiddenException,
     Injectable,
+    Logger,
     NotFoundException,
     UnauthorizedException,
 } from "@nestjs/common";
@@ -19,16 +20,19 @@ import {PaginationResponse} from "../../common/models/responses/pagination.respo
 import {UserQuizEntity} from "./models/entity/user-quiz.entity";
 import {AnswerEntity} from "../questions/models/entities/answer.entity";
 import {UpdateQuestionDto} from "./models/dto/update-question.dto";
-import {FileService} from "../file/file.service";
 import {AnswerContentDto} from "./models/dto/answer-content.dto";
+import {ConfigService} from "@nestjs/config";
+import {PartialAnswerEntity} from "../questions/models/entities/partial-answer.entity";
 
 @Injectable()
 export class QuizService{
+    private readonly logger: Logger = new Logger(QuizService.name);
+
     constructor(
         private readonly prismaService: PrismaService,
         private readonly cipherService: CipherService,
         private readonly questionsService: QuestionsService,
-        private readonly fileService: FileService,
+        private readonly configService: ConfigService,
     ){}
 
     async createQuiz(title: string, description?: string, difficulty?: Difficulties, category?: Categories, user?: UserEntity): Promise<QuizEntity>{
@@ -463,5 +467,112 @@ export class QuizService{
                 id: quizId,
             },
         });
+    }
+
+    async generateQuiz(user: UserEntity, theme: string, questionCount: number, insertInDatabase: boolean){
+        const apiUrl = this.configService.get<string>("AI_API_URL");
+        const apiKey = this.configService.get<string>("AI_API_KEY");
+        const prompt = `
+        Voici le format d'un quiz :
+{
+  "difficulty": "EASY",
+  "category": "GENERAL_KNOWLEDGE",
+  "title": "string",
+  "description": "string",
+  "questions": [
+    {
+      "difficulty": "EASY",
+      "category": "GENERAL_KNOWLEDGE",
+      "question": "string",
+      "correctAnswer": "string",
+      "incorrectAnswers": [
+        "string"
+      ]
+    }
+  ]
+}
+
+Voici les catégories :
+[
+  "GENERAL_KNOWLEDGE",
+  "ENTERTAINMENT_BOOKS",
+  "ENTERTAINMENT_FILM",
+  "ENTERTAINMENT_MUSIC",
+  "ENTERTAINMENT_MUSICALS_AND_THEATRES",
+  "ENTERTAINMENT_TELEVISION",
+  "ENTERTAINMENT_VIDEO_GAMES",
+  "ENTERTAINMENT_BOARD_GAMES",
+  "SCIENCE_AND_NATURE",
+  "SCIENCE_COMPUTERS",
+  "SCIENCE_MATHEMATICS",
+  "MYTHOLOGY",
+  "SPORTS",
+  "GEOGRAPHY",
+  "HISTORY",
+  "POLITICS",
+  "ART",
+  "CELEBRITIES",
+  "ANIMALS",
+  "VEHICLES",
+  "ENTERTAINMENT_COMICS",
+  "SCIENCE_GADGETS",
+  "ENTERTAINMENT_JAPANESE_ANIME_AND_MANGA",
+  "ENTERTAINMENT_CARTOON_AND_ANIMATIONS"
+]
+
+Voici les difficultées :
+[
+  "EASY",
+  "MEDIUM",
+  "HARD"
+]
+
+A partir de cela, génère moi un quiz de ${questionCount} questions en Français sur le thème "${theme}". Donne moi toutes les questions d'un coup. Utilise les dernières données dont tu disposes. Ne répond que le Json.
+        `;
+        const response = await fetch(`${apiUrl}/v1/chat/completions`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Cookie": `token=${apiKey}`,
+            },
+            body: JSON.stringify({
+                model: "llama-3.2-3b-instruct:q4_k_m",
+                messages: [
+                    {
+                        role: "user",
+                        content: prompt,
+                        image: "",
+                    },
+                ],
+                stream: false,
+            }),
+        });
+        const data = await response.json();
+        if(data.error)
+            throw new BadRequestException(data.error);
+        try{
+            const content = JSON.parse(data.choices[0].message.content);
+            if(insertInDatabase){
+                const quiz = await this.createQuiz(content.title, content.description, content.difficulty, content.category, user);
+                await this.updateQuiz(quiz.id, quiz.title, content.questions.map((question: any): PartialQuestionEntity => {
+                    return {
+                        question: question.question,
+                        difficulty: question.difficulty,
+                        category: question.category,
+                        answers: question.incorrectAnswers.map((answer: string): PartialAnswerEntity => {
+                            return {
+                                correct: false,
+                                answerContent: answer,
+                                type: "TEXT",
+                            };
+                        }),
+                    };
+                }), user, quiz.description, quiz.difficulty, quiz.category);
+            }
+            return content;
+        }catch(_){
+            this.logger.debug(data.choices[0].message.content);
+            throw new BadRequestException("Could not parse answer");
+        }
     }
 }

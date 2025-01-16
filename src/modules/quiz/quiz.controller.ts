@@ -29,6 +29,8 @@ import {UserQuizEntity} from "./models/entity/user-quiz.entity";
 import {PaginationDto} from "../../common/models/dto/pagination.dto";
 import {UpdateQuestionDto} from "./models/dto/update-question.dto";
 import {QuestionEntity} from "../questions/models/entities/question.entity";
+import {GenerateQuizDto} from "./models/dto/generate-quiz.dto";
+import {AuthenticatedRequest} from "../users/models/models/authenticated-request";
 
 @Controller("quiz")
 @ApiTags("Quiz")
@@ -177,5 +179,15 @@ export class QuizController{
     @ApiBearerAuth()
     async deleteQuiz(@Req() req: MaybeAuthenticatedRequest, @Param("quiz_id") quizId: string): Promise<void>{
         return this.quizService.deleteQuiz(quizId, req.user);
+    }
+
+    /**
+     * Only used for testing purposes
+     */
+    @Post("generate")
+    @UseGuards(AuthGuard)
+    @ApiBearerAuth()
+    async generateQuiz(@Req() req: AuthenticatedRequest, @Body() body: GenerateQuizDto): Promise<void>{
+        return this.quizService.generateQuiz(req.user, body.theme, body.questionCount, body.insertInDatabase);
     }
 }
