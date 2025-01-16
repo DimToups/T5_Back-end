@@ -31,6 +31,7 @@ import {UpdateQuestionDto} from "./models/dto/update-question.dto";
 import {QuestionEntity} from "../questions/models/entities/question.entity";
 import {GenerateQuizDto} from "./models/dto/generate-quiz.dto";
 import {AuthenticatedRequest} from "../users/models/models/authenticated-request";
+import {Throttle} from "@nestjs/throttler";
 
 @Controller("quiz")
 @ApiTags("Quiz")
@@ -187,6 +188,7 @@ export class QuizController{
     @Post("generate")
     @UseGuards(AuthGuard)
     @ApiBearerAuth()
+    @Throttle({default: {limit: 1, ttl: 60000}})
     async generateQuiz(@Req() req: AuthenticatedRequest, @Body() body: GenerateQuizDto): Promise<void>{
         return this.quizService.generateQuiz(req.user, body.theme, body.questionCount, body.insertInDatabase);
     }
