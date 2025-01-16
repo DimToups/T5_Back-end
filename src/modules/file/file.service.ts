@@ -141,6 +141,6 @@ export class FileService{
     }
 
     private async resizeImage(image: Buffer, width: number, height: number): Promise<Buffer>{
-        return await sharp(image).resize(width, height, {fit: "contain"}).toBuffer();
+        return await sharp(image).resize(width, height, {fit: "contain", background: {r: 0, g: 0, b: 0, alpha: 1}}).toBuffer();
     }
 }
