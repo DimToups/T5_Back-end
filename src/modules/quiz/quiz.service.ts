@@ -559,13 +559,20 @@ A partir de cela, génère moi un quiz de ${questionCount} questions en Françai
                         question: question.question,
                         difficulty: question.difficulty,
                         category: question.category,
-                        answers: question.incorrectAnswers.map((answer: string): PartialAnswerEntity => {
-                            return {
-                                correct: false,
-                                answerContent: answer,
+                        answers: {
+                            ...question.incorrectAnswers.map((answer: string): PartialAnswerEntity => {
+                                return {
+                                    correct: false,
+                                    answerContent: answer,
+                                    type: "TEXT",
+                                };
+                            }),
+                            ...{
+                                correct: true,
+                                answerContent: question.correctAnswer,
                                 type: "TEXT",
-                            };
-                        }),
+                            },
+                        },
                     };
                 }), user, quiz.description, quiz.difficulty, quiz.category);
             }
