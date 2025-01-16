@@ -307,6 +307,7 @@ export class RoomsService{
                 break;
         }
         const questionCount: number = await this.gamesService.getQuestionCount(roomData.room.id);
+        this.playerAnswers.set(roomData.room.id, Array.from({length: questionCount}));
         for(let i: number = 0; i < questionCount; i++){
             const question: PublicQuestionEntity = await this.gamesService.getCurrentQuestion(roomData.room.id);
             this.roomsGatewayService.onQuestionStart(roomData.room.id, {
@@ -314,8 +315,14 @@ export class RoomsService{
                 endAt: new Date(Date.now() + questionDuration),
             } as QuestionResponse);
             const correctAnswer = await this.gamesService.getCorrectAnswer(question.sum);
-            // TODO: If required, add lower sleep and check for player answers to end the question in scrum mode
-            await this.sleep(questionDuration);
+            const start = Date.now();
+            while(Date.now() - start < questionDuration){
+                // Check if all players have answered
+                const answerCount = this.playerAnswers.get(roomData.room.id)[i]?.length || 0;
+                if(answerCount === roomData.players.length)
+                    break;
+                await this.sleep(250);
+            }
             this.roomsGatewayService.onQuestionEnd(roomData.room.id, {
                 ...await this.getRoomData(roomData.room.id),
                 correctAnswer,
@@ -373,12 +380,9 @@ export class RoomsService{
         });
         if(!roomPlayers.find(player => player.id === playerId))
             throw new NotFoundException("Room player not found");
-        const questionCount: number = await this.gamesService.getQuestionCount(roomId);
         const currentQuestion = await this.gamesService.getCurrentQuestion(roomId);
         // Check if player has already answered and store its answer state to memory
-        if(!this.playerAnswers.has(roomId))
-            this.playerAnswers.set(roomId, Array.from({length: questionCount}));
-        let currentQuestionAnswers = this.playerAnswers.get(roomId)[currentQuestion.position];
+        let currentQuestionAnswers: string[] = this.playerAnswers.get(roomId)[currentQuestion.position];
         if(!currentQuestionAnswers)
             currentQuestionAnswers = [playerId];
         else if(currentQuestionAnswers.includes(playerId))
@@ -399,6 +403,9 @@ export class RoomsService{
                     },
                 },
             });
+        // If correct answer for scrum mode, fill answer for all players to trigger next question
+        if(isAnswerCorrect && room.game.mode === GameModes.MULTIPLAYER)
+            this.playerAnswers.get(roomId)[currentQuestion.position] = roomPlayers.map(player => player.id);
         // Trigger update for clients
         this.roomsGatewayService.onPlayerAnswer(roomId, this.playerAnswers.get(roomId)[currentQuestion.position]);
     }
