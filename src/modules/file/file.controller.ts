@@ -39,7 +39,7 @@ export class FileController{
             fileSize: 1024 * 1024 * 50,
         },
         fileFilter: (req, file, cb) => {
-            if(!RegExp(/\/(jpg|jpeg|png|gif|webp|avif|mp3|opus|ogg|m4a|wav|flac|aac)$/).exec(file.mimetype)){
+            if(!RegExp(/\/(jpg|jpeg|png|gif|webp|avif|mp3|opus|ogg|m4a|wav|flac|aac|mpeg)$/).exec(file.mimetype)){
                 return cb(new BadRequestException("Only images can be uploaded"), false);
             }
             cb(null, true);
