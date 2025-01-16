@@ -318,8 +318,7 @@ export class RoomsService{
             const start = Date.now();
             while(Date.now() - start < questionDuration){
                 // Check if all players have answered
-                const answerCount = this.playerAnswers.get(roomData.room.id)[i]?.length || 0;
-                if(answerCount === roomData.players.length)
+                if(this.playerAnswers.get(roomData.room.id)[i]?.length || 0 === roomData.players.length)
                     break;
                 await this.sleep(250);
             }
@@ -382,14 +381,14 @@ export class RoomsService{
             throw new NotFoundException("Room player not found");
         const currentQuestion = await this.gamesService.getCurrentQuestion(roomId);
         // Check if player has already answered and store its answer state to memory
-        let currentQuestionAnswers: string[] = this.playerAnswers.get(roomId)[currentQuestion.position];
-        if(!currentQuestionAnswers)
-            currentQuestionAnswers = [playerId];
-        else if(currentQuestionAnswers.includes(playerId))
+        let currentQuestionAnswers: string[] = this.playerAnswers.get(roomId)[currentQuestion.position] || [];
+        if(currentQuestionAnswers.includes(playerId))
             throw new BadRequestException("Player has already answered");
-        else
-            currentQuestionAnswers.push(playerId);
-        this.playerAnswers.get(roomId)[currentQuestion.position] = currentQuestionAnswers;
+        currentQuestionAnswers.push(playerId);
+        this.playerAnswers.set(roomId, {
+            ...this.playerAnswers.get(roomId),
+            [currentQuestion.position]: currentQuestionAnswers,
+        });
         // Check answer and calculate score
         const isAnswerCorrect = await this.gamesService.isAnswerCorrect(currentQuestion.sum, submitAnswerDto.answer);
         if(isAnswerCorrect)
@@ -405,7 +404,10 @@ export class RoomsService{
             });
         // If correct answer for scrum mode, fill answer for all players to trigger next question
         if(isAnswerCorrect && room.game.mode === GameModes.MULTIPLAYER)
-            this.playerAnswers.get(roomId)[currentQuestion.position] = roomPlayers.map(player => player.id);
+            this.playerAnswers.set(roomId, {
+                ...this.playerAnswers.get(roomId),
+                [currentQuestion.position]: roomPlayers.map(player => player.id),
+            });
         // Trigger update for clients
         this.roomsGatewayService.onPlayerAnswer(roomId, this.playerAnswers.get(roomId)[currentQuestion.position]);
     }
