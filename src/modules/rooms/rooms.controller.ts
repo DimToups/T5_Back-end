@@ -133,6 +133,6 @@ export class RoomsController{
     @UseGuards(RoomAuthGuard)
     @ApiBearerAuth()
     async getRoomState(@Req() req: AuthenticatedRequestEntity): Promise<CompleteRoomEntity>{
-        return this.roomsService.getRoomData(req.room.id);
+        return this.roomsService.getRoomData(req.room.id, req.player);
     }
 }
