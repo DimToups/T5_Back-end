@@ -21,7 +21,6 @@ import {JoinRoomDto} from "./models/dto/join-room.dto";
 import {RoomAuthGuard} from "./guards/room.guard";
 import {AuthenticatedRequestEntity} from "./models/entities/authenticated-request.entity";
 import {SubmitAnswerDto} from "../games/models/dto/submit-answer.dto";
-import {CompleteRoomEntity} from "./models/entities/complete-room.entity";
 
 @Controller("rooms")
 @ApiTags("Rooms")
@@ -132,7 +131,7 @@ export class RoomsController{
     @Get("state")
     @UseGuards(RoomAuthGuard)
     @ApiBearerAuth()
-    async getRoomState(@Req() req: AuthenticatedRequestEntity): Promise<CompleteRoomEntity>{
-        return this.roomsService.getRoomData(req.room.id, req.player);
+    async getRoomState(@Req() req: AuthenticatedRequestEntity): Promise<CreateRoomResponse>{
+        return (await this.roomsService.getRoomData(req.room.id, req.player) as CreateRoomResponse);
     }
 }
