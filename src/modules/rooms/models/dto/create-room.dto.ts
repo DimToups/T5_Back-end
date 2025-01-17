@@ -39,6 +39,6 @@ export class CreateRoomDto{
     @IsOptional()
     @IsNumber()
     @Min(2)
-    @Max(10)
+    @Max(50)
     maxPlayers?: number;
 }
